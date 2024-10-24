@@ -64,7 +64,7 @@ steps:
 
 - bash: |
     echo ">>> Install vsce"
-    npm install -g vsce
+    npm install -g @vscode/vsce
     echo ">>> Publish extension"
     npm run deploy -- -p $(VSCODE_MARKETPLACE_TOKEN)
   displayName: Publish
