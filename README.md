@@ -333,6 +333,7 @@ You can specify how you want the extension to activate by setting the parameter 
 |`perforce.user`                    |`string`   |Use the specified user
 |`perforce.port`                    |`string`   |Use the specified protocol:host:port
 |`perforce.password`                |`string`   |Use the specified password
+|`perforce.charset`                 |`enum`     |Use the specified charset for unicode or utf16 files
 |&nbsp; 
 |`perforce.editOnFileSave`          |`boolean`  |Automatically open a file for edit when saved
 |`perforce.editOnFileModified`      |`boolean`  |Automatically open a file for edit when Modified

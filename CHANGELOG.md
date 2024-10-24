@@ -1,5 +1,10 @@
 # Change log
 
+## [4.16.0] - 2024-10-24
+
+* Add support for overriding P4CHARSET using perforce.charset setting (#270) - Thanks @hozuki
+* Symbolic links to directories are now correctly considered as directories when running perforce commands (#288 & #257) - Thanks @mpriya501 and @jacob-kay2
+
 ## [4.15.6] - 2023-03-02
 
 * Work around vscode/#17588 where extension would not properly initialize
@@ -481,6 +486,7 @@ Otherwise, this version *should* be backward compatible. The following changes h
 * `edit` command on opened file
 * `revert` command on opened file
 
+[4.16.0]: https://github.com/mjcrouch/vscode-perforce/compare/4.15.6...4.16.0
 [4.15.6]: https://github.com/mjcrouch/vscode-perforce/compare/4.15.5...4.15.6
 [4.15.5]: https://github.com/mjcrouch/vscode-perforce/compare/4.15.4...4.15.5
 [4.15.4]: https://github.com/mjcrouch/vscode-perforce/compare/4.15.3...4.15.4
