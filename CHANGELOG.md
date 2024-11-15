@@ -1,5 +1,9 @@
 # Change log
 
+## [4.16.1] - 2024-11-15
+
+* Fixes an issue where URIs used internally to represent files in the perforce depot were technically invalid and could cause errors in the C# extension. Note that following this change, when displaying a single file from the depot, the title will be displayed slightly differently. Instead of filename#2 or filename@=123 it will say filename-rev-2 or filename@shelved-123 (#260)
+
 ## [4.16.0] - 2024-10-24
 
 * Add support for overriding P4CHARSET using perforce.charset setting (#270) - Thanks @hozuki
@@ -486,6 +490,7 @@ Otherwise, this version *should* be backward compatible. The following changes h
 * `edit` command on opened file
 * `revert` command on opened file
 
+[4.16.1]: https://github.com/mjcrouch/vscode-perforce/compare/4.16.0...4.16.1
 [4.16.0]: https://github.com/mjcrouch/vscode-perforce/compare/4.15.6...4.16.0
 [4.15.6]: https://github.com/mjcrouch/vscode-perforce/compare/4.15.5...4.15.6
 [4.15.5]: https://github.com/mjcrouch/vscode-perforce/compare/4.15.4...4.15.5
