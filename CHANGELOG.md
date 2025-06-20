@@ -2,7 +2,7 @@
 
 ## [4.16.2] - 2025-06-20
 
-* Reduces load on the perforce server, by issuing fewer commands when refreshing the list of changelists. Previously the extension issued one fstat command per open file. It now issues one per changelist.
+* Reduces load on the perforce server, by issuing fewer commands when refreshing the list of changelists. Previously the extension issued one fstat command per open file. It now issues one per changelist (#301) - Thanks @cpmclouth
 
 ## [4.16.1] - 2024-11-15
 
