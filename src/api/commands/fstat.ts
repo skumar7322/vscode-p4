@@ -37,11 +37,43 @@ function parseFstatSection(file: string) {
     return mergeAll({ depotFile: "" }, ...parseZTagBlock(file)) as FstatInfo;
 }
 
-function parseFstatOutput(fstatOutput: string) {
-    const all = splitIntoSections(fstatOutput.trim()).map((file) =>
-        parseFstatSection(file)
-    );
-    return all;
+function parseFstatOutput(fstatOutput: string): FstatInfo[] {
+    try {
+        // Parse the string into a JSON array
+        const jsonArray = JSON.parse(fstatOutput);
+
+        // Convert each JSON object to FstatInfo
+        return jsonArray.map((obj: any) => {
+            // Ensure depotFile exists and merge with default values
+            return mergeAll({ depotFile: "" }, obj) as FstatInfo;
+        });
+    } catch (error) {
+        console.error("Failed to parse fstat output:", error);
+        // Fallback to original parsing method for non-JSON input
+        const all = splitIntoSections(fstatOutput.trim()).map((file) =>
+            parseFstatSection(file)
+        );
+        return all;
+    }
+}
+
+function parseFstatOutputToMap(fstatOutput: string): Map<string, string> {
+    const map = new Map<string, string>();
+    try {
+        // Parse the string into a JSON array
+        const jsonArray = JSON.parse(fstatOutput);
+
+        // Iterate over each object in the array
+        jsonArray.forEach((obj: any) => {
+            Object.entries(obj).forEach(([key, value]) => {
+                map.set(key, String(value)); // Add key-value pairs to the map
+            });
+        });
+    } catch (error) {
+        console.error("Failed to parse fstat output:", error);
+    }
+
+    return map;
 }
 
 const fstatFlags = flagMapper<FstatOptions>(

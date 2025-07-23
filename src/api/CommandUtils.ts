@@ -250,7 +250,7 @@ export async function runPerforceCommand(
     const { input, hideStdErr, stdErrIsOk, useTerminal, logStdOut } = params;
 
     try {
-        const [stdout, stderr] = await runPerforceCommandRaw(
+        const [stdout, stderr, textBuffer] = await runPerforceCommandRaw(
             resource,
             command,
             args,
@@ -267,6 +267,8 @@ export async function runPerforceCommand(
             if (!stdErrIsOk) {
                 throw stderr;
             }
+        } else if (textBuffer) {
+            return textBuffer;
         }
         return stdout;
     } catch (err) {
@@ -289,19 +291,67 @@ function runPerforceCommandRaw(
     input?: string,
     useTerminal?: boolean,
     logStdOut?: boolean
-): Promise<[string, string]> {
+): Promise<[string, string, string | undefined]> {
     return new Promise((resolve, reject) =>
         PerforceService.execute(
             resource,
             command,
-            (err, stdout, stderr) => {
-                if (logStdOut && stdout) {
-                    Display.channel.appendLine("< " + stdout);
-                }
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve([stdout, stderr]);
+            //p4-node: Updated to properly handle P4Data structure with object parsing
+            (result) => {
+                try {
+                    // const stderr = result.error?.message || "";
+                    // let stdout = "";
+
+                    // //p4-node: Parse info array properly - handle both objects and strings
+                    // result.info?.forEach((data) => {
+                    //     if (typeof data === "string") {
+                    //         stdout += data + "\n";
+                    //     } else if (typeof data === "object") {
+                    //         // Convert object to key: value format
+                    //         Object.entries(data).forEach(([key, value]) => {
+                    //             stdout += `${key}: ${value}\n`;
+                    //         });
+                    //     } else {
+                    //         stdout += JSON.stringify(data) + "\n";
+                    //     }
+                    // });
+
+                    // //p4-node: Fixed logStdOut condition - was checking string literal instead of variable
+                    // if (logStdOut && stdout) {
+                    //     Display.channel.appendLine("< " + stdout);
+                    // }
+                    // resolve([stdout, stderr]);
+                    const stderr = result.error?.message || "";
+                    const stdout: any[] = []; // Change stdout to an array to hold JSON objects
+
+                    //p4-node: Parse info array properly - handle both objects and strings
+                    result.info?.forEach((data) => {
+                        if (typeof data === "string") {
+                            stdout.push({ raw: data }); // Wrap strings in an object for consistency
+                        } else if (typeof data === "object") {
+                            stdout.push(data); // Directly add objects to the array
+                        } else {
+                            stdout.push({ raw: JSON.stringify(data) }); // Wrap other types in an object
+                        }
+                    });
+
+                    //p4-node: Fixed logStdOut condition - was checking string literal instead of variable
+                    if (logStdOut && stdout.length > 0) {
+                        Display.channel.appendLine(
+                            "< " + JSON.stringify(stdout, null, 2)
+                        ); // Log as JSON
+                    }
+
+                    let textBufferContent: string | undefined;
+                    if (result.textBuffer) {
+                        // Handle text buffer if available
+                        textBufferContent = result.textBuffer.toString();
+                        Display.channel.appendLine("Text Content: " + textBufferContent);
+                    }
+
+                    resolve([JSON.stringify(stdout), stderr, textBufferContent]);
+                } catch (error) {
+                    reject(error);
                 }
             },
             args,

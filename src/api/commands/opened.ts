@@ -37,9 +37,33 @@ function parseOpenFile(line: string): OpenedFile | undefined {
 }
 
 function parseOpenedOutput(output: string): OpenedFile[] {
-    // example:
-    // //depot/testArea/stuff#1 - edit change 46 (text)
-    return splitIntoLines(output.trim()).map(parseOpenFile).filter(isTruthy);
+    try {
+        // Parse JSON array of objects
+        const jsonArray = JSON.parse(output.trim());
+        const openedFiles: OpenedFile[] = [];
+
+        // Map each object to OpenedFile interface
+        jsonArray.map((obj: any) => {
+            // Extract changelist number from change field
+            const chnum = obj.change === "default" ? "default" : obj.change;
+
+            openedFiles.push({
+                depotPath: obj.depotFile || obj.depotPath,
+                revision: obj.rev || obj.revision,
+                operation: obj.action || obj.operation,
+                chnum: chnum,
+                filetype: obj.type || obj.filetype,
+                message:
+                    obj.message ||
+                    `${obj.depotFile}#${obj.rev} - ${obj.action} ${obj.change} (${obj.type})`,
+            });
+        });
+
+        return openedFiles; // Add this return statement
+    } catch (error) {
+        console.error("Failed to parse opened output:", error);
+        return []; // Return empty array on parse failure
+    }
 }
 
 function parseUnopenFile(line: string): UnopenedFile | undefined {

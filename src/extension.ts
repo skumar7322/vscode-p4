@@ -42,12 +42,12 @@ export type ClientRoot = {
 async function findClientRoot(uri: vscode.Uri): Promise<ClientRoot | undefined> {
     try {
         const info = await p4.getInfo(uri, {});
-        const rootStr = info.get("Client root");
+        const rootStr = info.get("clientRoot");
         if (rootStr) {
-            const clientName = info.get("Client name") ?? "unknown";
-            const serverAddress = info.get("Server address") ?? "";
-            const userName = info.get("User name") ?? "";
-            const caseInsensitive = info.get("Case Handling") === "insensitive";
+            const clientName = info.get("clientName") ?? "unknown";
+            const serverAddress = info.get("serverAddress") ?? "";
+            const userName = info.get("userName") ?? "";
+            const caseInsensitive = info.get("caseHandling") === "insensitive";
             const isInRoot = isInClientRoot(
                 uri,
                 Utils.normalize(rootStr),
@@ -111,7 +111,7 @@ async function findP4ConfigFiles(
 
     const pattern = new vscode.RelativePattern(
         wksFolder,
-        noConfig ? `**/.p4config` : `**/${configName}`
+        noConfig ? "**/.p4config" : `**/${configName}`
     );
 
     if (noConfig) {

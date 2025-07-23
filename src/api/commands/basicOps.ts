@@ -228,7 +228,23 @@ export const sync = makeSimpleCommand("sync", syncFlags, (opts) => {
 
 function parseInfo(output: string): Map<string, string> {
     const map = new Map<string, string>();
-    const lines = output.trim().split(/\r?\n/);
+    let stdout = "";
+
+    //p4-node: Convest json object string to normal string
+    JSON.parse(output).forEach((data: any) => {
+        if (typeof data === "string") {
+            stdout += data + "\n";
+        } else if (typeof data === "object") {
+            // Convert object to key: value format
+            Object.entries(data).forEach(([key, value]) => {
+                stdout += `${key}: ${value}\n`;
+            });
+        } else {
+            stdout += JSON.stringify(data) + "\n";
+        }
+    });
+
+    const lines = stdout.trim().split(/\r?\n/);
 
     for (let i = 0, n = lines.length; i < n; ++i) {
         // Property Name: Property Value

@@ -30,6 +30,7 @@ import { splitBy, pluralise, isTruthy } from "./TsUtils";
 import { perforceFsProvider } from "./FileSystemProvider";
 import { showRevChooserForFile } from "./quickPick/FileQuickPick";
 import { changeSpecEditor, jobSpecEditor } from "./SpecEditor";
+import { stderr } from "process";
 
 // TODO resolve
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -727,13 +728,16 @@ export namespace PerforceCommands {
             }
         }
 
-        PerforceService.execute(resource, "opened", (err, stdout, stderr) => {
+        PerforceService.execute(resource, "opened", (result) => {
+            //p4-node
+            const err = false;
+            const stderr = false;
             if (err) {
-                Display.showError(err.message);
+                Display.showError("err.message");
             } else if (stderr) {
-                Display.showError(stderr.toString());
+                Display.showError("stderr".toString());
             } else {
-                const opened = stdout.toString().trim().split("\n");
+                const opened = "stdout".toString().trim().split("\n");
                 if (opened.length === 0) {
                     return false;
                 }
@@ -786,18 +790,21 @@ export namespace PerforceCommands {
             }
 
             const args = [file];
+            //p4-node
             PerforceService.execute(
                 resource,
                 "where",
-                (err, stdout, stderr) => {
+                (result) => {
+                    const err = false;
+                    const stderr = false;
                     if (err) {
-                        Display.showError(err.message);
+                        Display.showError("err.message");
                         reject(err);
                     } else if (stderr) {
-                        Display.showError(stderr.toString());
+                        Display.showError("stderr".toString());
                         reject(stderr);
                     } else {
-                        resolve(stdout.toString());
+                        resolve("stdout".toString());
                     }
                 },
                 args

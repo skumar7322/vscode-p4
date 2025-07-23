@@ -16,11 +16,7 @@ import { getStatusText } from "./testUtils";
 import * as PerforceUri from "../../PerforceUri";
 import { parseDate, isTruthy } from "../../TsUtils";
 
-type PerforceResponseCallback = (
-    err: Error | null,
-    stdout: string,
-    stderr: string
-) => void;
+type PerforceResponseCallback = (result: any) => void;
 
 export interface StubJob {
     name: string;
@@ -59,7 +55,7 @@ function executeStub(
     _input?: string
 ) {
     setImmediate(() => {
-        responseCallback(null, command, "");
+        responseCallback(null);
     });
 }
 
