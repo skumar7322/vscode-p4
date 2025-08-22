@@ -40,3 +40,11 @@ export type PerforceFile = Uri | string;
 export function isUri(obj: any): obj is Uri {
     return obj && obj.fsPath !== undefined && obj.scheme !== undefined;
 }
+
+export enum P4Commands {
+    ANNOTATE = "annotate",
+    ADD = "add",
+    EDIT = "edit",
+    DELETE = "delete",
+    FILELOG = "filelog",
+}

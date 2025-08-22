@@ -218,7 +218,7 @@ export namespace PerforceService {
                 cwd,
                 user: p4User !== "none" ? p4User : "skumarSuper",
                 client: p4Client !== "none" ? p4Client : "skumar_frist_temp",
-                port: p4Port !== "none" ? p4Port : "192.168.1.6:1666",
+                port: p4Port !== "none" ? p4Port : "192.168.29.67:1666",
             };
 
             // Create p4node instance

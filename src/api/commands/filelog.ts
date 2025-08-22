@@ -1,12 +1,6 @@
 import * as vscode from "vscode";
-import {
-    flagMapper,
-    makeSimpleCommand,
-    sectionArrayBy,
-    splitIntoLines,
-} from "../CommandUtils";
-import { PerforceFile } from "../CommonTypes";
-import { isTruthy, parseDate } from "../../TsUtils";
+import { flagMapper, makeSimpleCommand } from "../CommandUtils";
+import { PerforceFile, P4Commands } from "../CommonTypes";
 
 export interface FilelogOptions {
     file: PerforceFile;
@@ -23,7 +17,7 @@ const filelogFlags = flagMapper<FilelogOptions>(
     ["-l", "-t"]
 );
 
-const filelog = makeSimpleCommand("filelog", filelogFlags);
+const filelog = makeSimpleCommand(P4Commands.FILELOG, filelogFlags);
 
 export enum Direction {
     TO,
@@ -50,24 +44,13 @@ export type FileLogItem = {
     integrations: FileLogIntegration[];
 };
 
-function parseFileLogIntegrations(lines: string[]): FileLogIntegration[] {
-    return lines
-        .map((line) => {
-            const matches = /^.{3} .{3} (\S+) (into|from) (.*?)#(\d+)(?:,#(\d+))?$/.exec(
-                line
-            );
-            if (matches) {
-                const [, operation, dirString, file, startRevStr, endRevStr] = matches;
-                const direction = dirString === "into" ? Direction.TO : Direction.FROM;
-                const startRev = endRevStr ? startRevStr : undefined;
-                const endRev = endRevStr ? endRevStr : startRevStr;
-                return { operation, direction, file, startRev, endRev };
-            }
-        })
-        .filter(isTruthy);
+export async function getFileHistory(resource: vscode.Uri, options: FilelogOptions) {
+    const output = await filelog(resource, options);
+    const parsed = parseFileLogOutputNew(output);
+    return parsed;
 }
 
-function parseFilelogItem(item: string[], file: string): FileLogItem | undefined {
+function parseFileLogOutputNew(output: string): FileLogItem[] {
     // example:
     // ... #9 change 43 integrate on 2020/03/29 18:48:43 by zogge@default (text)
     //
@@ -75,55 +58,88 @@ function parseFilelogItem(item: string[], file: string): FileLogItem | undefined
     //
     // ... ... copy into //depot/TestArea/newFile.txt#5
     // ... ... edit from //depot/TestArea/newFile.txt#3,#4
-    const [header, ...desc] = item;
-
-    const matches = /^\.{3} #(\d+) change (\d+) (\S+) on (.*?) by (.*?)@(.*?) (.*?)$/.exec(
-        header
-    );
-    if (matches) {
-        const [, revision, chnum, operation, date, user, client] = matches;
-        const description = desc
-            .filter((l) => l.startsWith("\t"))
-            .map((l) => l.slice(1))
-            .join("\n");
-        const integStrings = desc.filter((l) => l.startsWith("... ..."));
-        const integrations = parseFileLogIntegrations(integStrings);
-
-        return {
-            file,
-            description,
-            revision,
-            chnum,
-            operation,
-            date: parseDate(date),
-            user,
-            client,
-            integrations,
-        };
+    const filelogDataArray = JSON.parse(output);
+    if (!Array.isArray(filelogDataArray) || filelogDataArray.length < 0) {
+        return []; //check if valid error coudld be thrown
     }
+
+    const fileLogItems: FileLogItem[] = [];
+    filelogDataArray.forEach((obj: any) => {
+        // All revisions of a single file. Revisions will start from 0
+        let revNumber = 0;
+        let revision = obj["rev" + revNumber];
+        while (revision !== undefined && revision !== null) {
+            const file = obj["depotFile"];
+            const chnum = obj["change" + revNumber];
+            const operation = obj["action" + revNumber];
+            const dateTimestamp = obj["time" + revNumber];
+            const user = obj["user" + revNumber];
+            const client = obj["client" + revNumber];
+            const description = obj["desc" + revNumber];
+            const integrations = getFileLogIntegration(obj, revNumber);
+
+            fileLogItems.push({
+                file,
+                description,
+                revision,
+                chnum,
+                operation,
+                date: dateTimestamp
+                    ? new Date(parseInt(dateTimestamp) * 1000)
+                    : undefined,
+                user,
+                client,
+                integrations,
+            });
+
+            revNumber++;
+            revision = obj["rev" + revNumber];
+        }
+    });
+
+    return fileLogItems;
+}
+function getFileLogIntegration(obj: any, revNumber: number): FileLogIntegration[] {
+    // Get Integration details
+    let revRevNum = 0;
+    let file = obj["file" + revNumber + "," + revRevNum];
+    const revIntegrations: FileLogIntegration[] = [];
+    while (file !== undefined && file !== null) {
+        const how = obj["how" + revNumber + "," + revRevNum];
+        let operation = "";
+        if (how !== null && how !== undefined) {
+            operation = how.split(" ")[0];
+        }
+        const direction = how.includes("into") ? Direction.TO : Direction.FROM;
+
+        const startRevStr = obj["srev" + revNumber + "," + revRevNum];
+        const endRevStr = obj["erev" + revNumber + "," + revRevNum];
+
+        // Parse startRevStr: can be "#none", "#1", or just "1"
+        const startRev = parseRev(startRevStr);
+        const endRev = parseRev(endRevStr);
+
+        //ToDo: handle if any revision is #none
+        const finalStartRev = endRev ? startRev : undefined;
+        const finalEndRev = endRev ? endRev : startRev;
+        revIntegrations.push({
+            operation,
+            direction,
+            file,
+            startRev: finalStartRev,
+            endRev: finalEndRev,
+        });
+        revRevNum++;
+        file = obj["file" + revNumber + "," + revRevNum];
+    }
+    return revIntegrations;
 }
 
-function parseFileLogFile(lines: string[]) {
-    const histories = sectionArrayBy(lines.slice(1), (line) => line.startsWith("... #"));
-
-    const file = lines[0];
-
-    return histories.map((h) => parseFilelogItem(h, file)).filter(isTruthy);
-}
-
-function parseFileLogFiles(lines: string[]) {
-    const files = sectionArrayBy(lines, (line) => line.startsWith("//"));
-
-    return files.flatMap(parseFileLogFile);
-}
-
-function parseFilelogOutput(output: string) {
-    const lines = splitIntoLines(output);
-
-    return parseFileLogFiles(lines);
-}
-
-export async function getFileHistory(resource: vscode.Uri, options: FilelogOptions) {
-    const output = await filelog(resource, options);
-    return parseFilelogOutput(output);
+function parseRev(rev: string | undefined | null): string {
+    if (!rev || rev === "#none") {
+        return "none";
+    } else if (rev.startsWith("#")) {
+        return rev.substring(1);
+    }
+    return rev;
 }
