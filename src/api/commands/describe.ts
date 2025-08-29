@@ -1,12 +1,5 @@
 import * as vscode from "vscode";
-import {
-    flagMapper,
-    makeSimpleCommand,
-    sectionArrayBy,
-    splitIntoLines,
-    asyncOuputHandler,
-    removeIndent,
-} from "../CommandUtils";
+import { flagMapper, makeSimpleCommand } from "../CommandUtils";
 import { FixedJob, ChangeInfo } from "../CommonTypes";
 import { isTruthy, parseDate } from "../../TsUtils";
 
@@ -40,81 +33,85 @@ export type DescribedChangelist = ChangeInfo & {
     fixedJobs: FixedJob[];
 };
 
-function withSection<T>(
-    sections: string[][],
-    sectionName: string,
-    parser: (lines: string[]) => T | undefined
-): T | undefined {
-    const found = sections.find((s) => s[0].startsWith(sectionName));
-    if (!found) {
-        return;
+function populateFiles(files: DepotFileOperation[], changeData: any): void {
+    let fileIndex = 0;
+    while (changeData[`depotFile${fileIndex}`]) {
+        files.push({
+            depotPath: changeData[`depotFile${fileIndex}`],
+            revision: changeData[`rev${fileIndex}`] || "",
+            operation: changeData[`action${fileIndex}`] || "",
+        });
+        fileIndex++;
     }
-    return parser(found);
 }
 
-function parseFileList(lines: string[]): DepotFileOperation[] {
-    return lines
-        .map((line) => {
-            const matches = /\.+\ (.*)#(.*) (.*)/.exec(line);
-            if (matches) {
-                const [, depotPath, revision, operation] = matches;
-                return { depotPath, revision, operation };
-            }
-        })
+function parseDescribeChangelist(
+    changeData: any,
+    options?: DescribeOptions
+): DescribedChangelist | undefined {
+    if (!changeData || typeof changeData !== "object") {
+        return undefined;
+    }
+
+    const chnum = changeData.change;
+    const user = changeData.user;
+    const client = changeData.client;
+    const dateStr = changeData.time;
+    const description = changeData.desc ? changeData.desc.split("\n") : [];
+    const isPending = changeData.status === "pending";
+
+    const affectedFiles: DepotFileOperation[] = [];
+    const shelvedFiles: DepotFileOperation[] = [];
+    if (!options?.shelved) {
+        populateFiles(affectedFiles, changeData);
+    } else {
+        populateFiles(shelvedFiles, changeData);
+    }
+    const fixedJobs: FixedJob[] = [];
+    let fileIndex = 0;
+    while (changeData[`job${fileIndex}`]) {
+        fixedJobs.push({
+            id: changeData[`job${fileIndex}`],
+            description: changeData[`jobstat${fileIndex}`] || "",
+        });
+        fileIndex++;
+    }
+
+    console.log("Parsing with options:", options);
+
+    return {
+        chnum,
+        user,
+        description,
+        client,
+        isPending,
+        date: dateStr ? new Date(parseInt(dateStr) * 1000) : undefined,
+        affectedFiles,
+        shelvedFiles,
+        fixedJobs,
+    };
+}
+
+function parseDescribeOutput(
+    output: string,
+    options?: DescribeOptions
+): DescribedChangelist[] {
+    const jsonData = JSON.parse(output);
+    if (!Array.isArray(jsonData)) {
+        return [];
+    }
+    return jsonData
+        .map((changeData) => parseDescribeChangelist(changeData, options))
         .filter(isTruthy);
 }
 
-function parseDescribeChangelist(lines: string[]): DescribedChangelist | undefined {
-    const sections = sectionArrayBy(
-        lines,
-        (line) => line.endsWith("...") && !line.startsWith("\t")
-    );
-
-    const descStart = lines.slice(2);
-    const descriptionEndPos = descStart.findIndex((line) => !line.startsWith("\t"));
-    const description = removeIndent(
-        descStart.slice(0, descriptionEndPos >= 0 ? descriptionEndPos : undefined)
-    );
-
-    // example:
-    // Change 35 by zogge@default on 2020/03/16 11:15:19 *pending*
-    const chMatches = /^Change (\d+) by (\S+?)@(\S+) on (.*?)( \*pending\*)?$/.exec(
-        lines[0]
-    );
-
-    if (chMatches) {
-        const [, chnum, user, client, dateStr, pendingStr] = chMatches;
-
-        const isPending = !!pendingStr;
-        const affectedFiles =
-            withSection(sections, "Affected files", parseFileList) ?? [];
-        const shelvedFiles = withSection(sections, "Shelved files", parseFileList) ?? [];
-        const fixedJobs =
-            withSection(sections, "Jobs fixed", parseFixedJobsSection) ?? [];
-
-        return {
-            chnum,
-            user,
-            description,
-            client,
-            isPending,
-            date: parseDate(dateStr),
-            affectedFiles,
-            shelvedFiles,
-            fixedJobs,
-        };
-    }
+export async function describe(
+    resource: vscode.Uri,
+    options: DescribeOptions
+): Promise<DescribedChangelist[]> {
+    const output = await describeCommand(resource, options);
+    return parseDescribeOutput(output, options);
 }
-
-function parseDescribeOutput(output: string): DescribedChangelist[] {
-    const allLines = splitIntoLines(output.trim());
-
-    const changelists = sectionArrayBy(allLines, (line) => /^Change \d+ by/.test(line));
-
-    return changelists.map(parseDescribeChangelist).filter(isTruthy);
-}
-
-export const describe = asyncOuputHandler(describeCommand, parseDescribeOutput);
 
 export interface GetShelvedOptions {
     chnums: string[];
@@ -123,20 +120,27 @@ export interface GetShelvedOptions {
 export type ShelvedChangeInfo = { chnum: number; paths: string[] };
 
 function parseShelvedDescribeOuput(output: string): ShelvedChangeInfo[] {
-    const allLines = splitIntoLines(output.trim());
+    const jsonData = JSON.parse(output);
+    if (!Array.isArray(jsonData)) {
+        return [];
+    }
 
-    const changelists = sectionArrayBy(allLines, (line) => /^Change \d+ by/.test(line));
+    return jsonData
+        .map((changeData: any) => ({
+            chnum: parseInt(changeData.change),
+            paths: extractDepotFiles(changeData),
+        }))
+        .filter((item) => item.paths.length > 0);
+}
 
-    return changelists
-        .map((section) => {
-            const matches = section
-                .slice(1)
-                .map((line) => /(\.+)\ (.*)#(.*) (.*)/.exec(line)?.[2])
-                .filter(isTruthy);
-            return { chnum: parseInt(section[0].split(" ")[1]), paths: matches };
-        })
-        .filter(isTruthy)
-        .filter((c) => c.paths.length > 0);
+function extractDepotFiles(changeData: any): string[] {
+    const paths: string[] = [];
+    let fileIndex = 0;
+    while (changeData[`depotFile${fileIndex}`]) {
+        paths.push(changeData[`depotFile${fileIndex}`]);
+        fileIndex++;
+    }
+    return paths;
 }
 
 export async function getShelvedFiles(
@@ -152,18 +156,6 @@ export async function getShelvedFiles(
         shelved: true,
     });
     return parseShelvedDescribeOuput(output);
-}
-
-function parseFixedJobsSection(subLines: string[]): FixedJob[] {
-    return sectionArrayBy(subLines, (line) => /^\S*? on/.test(line)).map((job) => {
-        return {
-            id: job[0].split(" ")[0],
-            description: job
-                .slice(1)
-                .filter((line) => line.startsWith("\t"))
-                .map((line) => line.slice(1)),
-        };
-    });
 }
 
 export interface GetFixedJobsOptions {

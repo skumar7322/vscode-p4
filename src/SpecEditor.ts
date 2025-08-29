@@ -8,6 +8,42 @@ import { PerforceSCMProvider } from "./ScmProvider";
 type SpecInstance = { resource: string; lastAccessed: number };
 type SpecStore = { [key: string]: SpecInstance };
 
+function convertJsonToSpecFormat(jsonText: string): string {
+    try {
+        // Parse the JSON array
+        const jsonData = JSON.parse(jsonText);
+        if (!Array.isArray(jsonData) || jsonData.length === 0) {
+            return jsonText; // Return original if not valid JSON array
+        }
+
+        const specData = jsonData[0]; // Take the first object
+        let specText = "";
+
+        // Handle each field with proper formatting
+        Object.keys(specData).forEach((key) => {
+            const value = specData[key];
+            if (key === "Description") {
+                // Special handling for Description field
+                specText += `${key}:\n`;
+                if (value) {
+                    const lines = value.split("\\n");
+                    lines.forEach((line: string) => {
+                        specText += `\t${line}\n`;
+                    });
+                }
+            } else {
+                // Regular field formatting
+                specText += `${key}:\t${value}\n\n`;
+            }
+        });
+
+        return specText.trim();
+    } catch (error) {
+        // If JSON parsing fails, return original text
+        return jsonText;
+    }
+}
+
 abstract class SpecEditor {
     private _state: vscode.Memento;
     private _store: vscode.Uri;
@@ -144,7 +180,8 @@ abstract class SpecEditor {
     }
 
     private async editSpecImpl(resource: vscode.Uri, item: string) {
-        const text = await this.getSpecText(resource, item);
+        const rawText = await this.getSpecText(resource, item);
+        const text = convertJsonToSpecFormat(rawText);
         const withMessage =
             text +
             "\n\n# When you are done editing, click the 'apply spec' button\n# on this editor's toolbar to apply the edit to the perforce server";
@@ -231,7 +268,7 @@ abstract class SpecEditor {
             // re-open with new values - old job specs are not valid because of the timestamp
             this.editSpec(resource, newItem ?? item);
         } catch (err) {
-            Display.showImportantError(err);
+            Display.showImportantError(String(err));
         }
     }
 

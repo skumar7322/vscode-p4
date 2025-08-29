@@ -216,9 +216,9 @@ export namespace PerforceService {
             // TODO: add better way to handle this props.
             const p4Props = {
                 cwd,
-                user: p4User !== "none" ? p4User : "skumarSuper",
-                client: p4Client !== "none" ? p4Client : "skumar_frist_temp",
-                port: p4Port !== "none" ? p4Port : "192.168.29.67:1666",
+                user: p4User !== "none" ? p4User : "temp",
+                client: p4Client !== "none" ? p4Client : "temp",
+                port: p4Port !== "none" ? p4Port : "temp",
             };
 
             // Create p4node instance
@@ -230,7 +230,8 @@ export namespace PerforceService {
             const cmdArgs = args ? [command, ...args] : [command];
 
             // Execute command with p4node
-            const result = parseP4Data(p4.Run(cmdArgs));
+            // if input is not empty or undefined pass it as second argument of p4.Run
+            const result = parseP4Data(p4.Run(cmdArgs, input));
 
             // Log the executed command
             const allArgs = getPerforceCmdParams(actualResource).concat(cmdArgs);
@@ -554,19 +555,21 @@ export namespace PerforceService {
         return new Promise((resolve, reject) => {
             PerforceService.executeAsPromise(resource, "set", ["-q"])
                 .then((stdout) => {
-                    let configIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                        "P4CONFIG="
-                    );
+                    let configIndex =
+                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                            "P4CONFIG="
+                        );
                     if (configIndex === -1) {
                         resolve(undefined);
                         return;
                     }
 
                     configIndex += "P4CONFIG=".length;
-                    const endConfigIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                        "\n",
-                        configIndex
-                    );
+                    const endConfigIndex =
+                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                            "\n",
+                            configIndex
+                        );
                     if (endConfigIndex === -1) {
                         //reject("P4 set -q parsing for P4CONFIG contains unexpected format");
                         resolve(undefined);
@@ -581,19 +584,21 @@ export namespace PerforceService {
                     );
                 })
                 .catch((err) => {
-                    let configIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                        "P4CONFIG="
-                    );
+                    let configIndex =
+                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                            "P4CONFIG="
+                        );
                     if (configIndex === -1) {
                         resolve(undefined);
                         return;
                     }
 
                     configIndex += "P4CONFIG=".length;
-                    const endConfigIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                        "\n",
-                        configIndex
-                    );
+                    const endConfigIndex =
+                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                            "\n",
+                            configIndex
+                        );
                     if (endConfigIndex === -1) {
                         //reject("P4 set -q parsing for P4CONFIG contains unexpected format");
                         resolve(undefined);

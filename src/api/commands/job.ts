@@ -1,10 +1,5 @@
 import { pipe } from "@arrows/composition";
-import {
-    flagMapper,
-    makeSimpleCommand,
-    asyncOuputHandler,
-    splitIntoLines,
-} from "../CommandUtils";
+import { flagMapper, makeSimpleCommand, asyncOuputHandler } from "../CommandUtils";
 import { RawField } from "../CommonTypes";
 import { getBasicField, parseSpecOutput } from "../SpecParser";
 import { isTruthy } from "../../TsUtils";
@@ -50,28 +45,33 @@ export type JobFix = {
     status: string;
 };
 
-function parseJobFix(line: string): JobFix | undefined {
-    const matches = /^(\S*) fixed by change (\d+) on (\S*) by (\S*?)@(\S*) \((.*?)\)$/.exec(
-        line
-    );
-    if (matches) {
-        const [, job, chnum, date, user, client, status] = matches;
-        return {
-            job,
-            chnum,
-            date,
-            user,
-            client,
-            status,
-        };
-    }
-}
+function parseJobFix(output: string): JobFix[] {
+    try {
+        const jsonData = JSON.parse(output);
+        if (!Array.isArray(jsonData)) {
+            return [];
+        }
 
-function parseFixesOutuput(output: string) {
-    // example:
-    // job000001 fixed by change 53 on 2020/04/04 by zogge@default (closed)
-    const lines = splitIntoLines(output);
-    return lines.map(parseJobFix).filter(isTruthy);
+        return jsonData
+            .map((jobData: any) => {
+                if (!jobData || typeof jobData !== "object") {
+                    return undefined;
+                }
+
+                const dateStr = jobData.Date;
+                return {
+                    job: jobData.Job || "",
+                    chnum: jobData.Change || "",
+                    date: dateStr ? new Date(parseInt(dateStr) * 1000).toString() : "",
+                    user: jobData.User || "",
+                    client: jobData.Client || "",
+                    status: jobData.Status || "",
+                };
+            })
+            .filter(isTruthy);
+    } catch (error) {
+        return [];
+    }
 }
 
 export type FixesOptions = {
@@ -81,7 +81,7 @@ export type FixesOptions = {
 const fixesFlags = flagMapper<FixesOptions>([["j", "job"]]);
 const fixesCommand = makeSimpleCommand("fixes", fixesFlags);
 
-export const fixes = asyncOuputHandler(fixesCommand, parseFixesOutuput);
+export const fixes = asyncOuputHandler(fixesCommand, parseJobFix);
 
 export type InputRawJobSpecOptions = {
     input: string;
@@ -93,6 +93,7 @@ export type CreatedJob = {
 };
 
 function parseCreatedJob(createdStr: string): CreatedJob {
+    // info should return [ 'Job job000008 saved.' ] but error because of swarm, but job got created
     const matches = /Job (\S*) (saved|not changed)/.exec(createdStr);
 
     return {
