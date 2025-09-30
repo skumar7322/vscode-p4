@@ -13,6 +13,7 @@ export type DeleteChangelistOptions = {
     chnum: string;
 };
 
+// TODO: Delete Changelist test
 const deleteChangelistFlags = flagMapper<DeleteChangelistOptions>([["d", "chnum"]]);
 
 export const deleteChangelist = makeSimpleCommand("change", deleteChangelistFlags, () => {
@@ -33,6 +34,7 @@ const submitFlags = flagMapper<SubmitChangelistOptions>(
     "file"
 );
 
+// TODO: Submit Changelist test
 const submitChangelistCommand = makeSimpleCommand("submit", submitFlags, () => {
     return { logStdOut: true };
 });
@@ -144,8 +146,8 @@ function isResolveWarning(obj: any): obj is ResolveWarning {
     return obj && obj.depotPath !== undefined && obj.resolvePath !== undefined;
 }
 
-function parseResolveMessage(line: string): ResolveWarning | undefined {
-    const matches = /\.{3} (.*?) - must resolve (.*?) before submitting/.exec(line);
+function parseResolveMessage(item: object): ResolveWarning | undefined {
+    const matches = /(.*?) - must resolve (.*?) before submitting/.exec(item.raw);
     if (matches) {
         const [, depotPath, resolvePath] = matches;
         return {
@@ -155,26 +157,30 @@ function parseResolveMessage(line: string): ResolveWarning | undefined {
     }
 }
 
-function parseUnshelveMessage(line: string): UnshelvedFile | undefined {
-    const matches = /(.*?) - unshelved, opened for (.*)/.exec(line);
-    if (matches) {
-        const [, depotPath, operation] = matches;
-        return {
-            depotPath,
-            operation,
-        };
+function parseUnshelveMessage(item: object): UnshelvedFile | undefined {
+    const typedItem = item as { depotFile?: string; action?: string };
+    if (typedItem === null || !typedItem.depotFile || !typedItem.action) {
+        return undefined;
     }
+    return {
+        depotPath: typedItem.depotFile,
+        operation: typedItem.action,
+    };
 }
 
-function parseUnshelveLine(line: string) {
-    return line.startsWith("...")
-        ? parseResolveMessage(line)
-        : parseUnshelveMessage(line);
+function parseUnshelveLine(item: any) {
+    if (Object.keys(item).includes("depotFile")) {
+        return parseUnshelveMessage(item);
+    }
+    return parseResolveMessage(item);
 }
 
 function parseUnshelveOutput(output: string): UnshelvedFiles {
-    const lines = splitIntoLines(output);
-    const parsed = lines.map((line) => parseUnshelveLine(line)).filter(isTruthy);
+    const jsonOutput = JSON.parse(output);
+    if (!Array.isArray(jsonOutput)) {
+        return { files: [], warnings: [] };
+    }
+    const parsed = jsonOutput.map((item) => parseUnshelveLine(item)).filter(isTruthy);
     return {
         files: parsed.filter(isUnshelvedFile),
         warnings: parsed.filter(isResolveWarning),
@@ -278,13 +284,21 @@ export type HaveFile = {
 };
 
 function parseHaveOutput(resource: vscode.Uri, output: string): HaveFile | undefined {
-    const matches = /^(.+)#(\d+) - (.+)/.exec(output);
-
-    if (matches) {
-        const [, depotPath, revision, localPath] = matches;
-        const depotUri = PerforceUri.fromDepotPath(resource, matches[1], matches[2]);
+    try {
+        const haveData = JSON.parse(output);
+        if (!Array.isArray(haveData) || haveData.length === 0) {
+            return undefined;
+        }
+        const fileData = haveData[0];
+        const depotPath = fileData.depotFile;
+        const revision = fileData.haveRev;
+        const localPath = fileData.path;
+        const depotUri = PerforceUri.fromDepotPath(resource, depotPath, revision);
         const localUri = vscode.Uri.file(localPath);
+
         return { depotPath, revision, depotUri, localUri };
+    } catch (error) {
+        return undefined;
     }
 }
 
@@ -324,8 +338,12 @@ const getLoggedInStatus = makeSimpleCommand<NoOpts>("login", () => ["-s"]);
 
 export async function isLoggedIn(resource: vscode.Uri): Promise<boolean> {
     try {
-        await getLoggedInStatus(resource, {});
-        return true;
+        const p4UserNotLoggedInMessage = "Perforce password (P4PASSWD) invalid or unset";
+        const loginStatus = await getLoggedInStatus(resource, {});
+        return !(
+            typeof loginStatus === "string" &&
+            loginStatus.includes(p4UserNotLoggedInMessage)
+        );
     } catch {
         return false;
     }

@@ -1,25 +1,25 @@
 import {
-    workspace,
-    Uri,
+    Disposable,
     FileType,
+    ShellExecution,
+    ShellQuotedString,
+    ShellQuoting,
     Task,
     tasks,
-    ShellExecution,
-    Disposable,
-    ShellQuoting,
-    ShellQuotedString,
+    Uri,
+    workspace,
 } from "vscode";
 
-import * as PerforceUri from "./PerforceUri";
 import { Display } from "./Display";
+import * as PerforceUri from "./PerforceUri";
 import { PerforceSCMProvider } from "./ScmProvider";
 
 import * as CP from "child_process";
 import spawn from "cross-spawn";
-import { CommandLimiter } from "./CommandLimiter";
-import * as Path from "path";
-import { configAccessor } from "./ConfigService";
 import p4Node from "p4node";
+import * as Path from "path";
+import { CommandLimiter } from "./CommandLimiter";
+import { configAccessor } from "./ConfigService";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace PerforceService {
@@ -156,13 +156,6 @@ export namespace PerforceService {
                 resource,
                 command, //p4-node: ToDO
                 (result) => {
-                    // if (err) {
-                    //     reject(err.message);
-                    // } else if (stderr) {
-                    //     reject(stderr);
-                    // } else {
-                    //     resolve(stdout.toString());
-                    // }
                     if (result.error !== undefined) {
                         reject(result.error.message);
                     } else {
@@ -216,9 +209,9 @@ export namespace PerforceService {
             // TODO: add better way to handle this props.
             const p4Props = {
                 cwd,
-                user: p4User !== "none" ? p4User : "temp",
-                client: p4Client !== "none" ? p4Client : "temp",
-                port: p4Port !== "none" ? p4Port : "temp",
+                user: p4User !== "none" ? p4User : "skumarSuper",
+                client: p4Client !== "none" ? p4Client : "skumar_frist_temp",
+                port: p4Port !== "none" ? p4Port : "192.168.99.73:1666",
             };
 
             // Create p4node instance
@@ -257,6 +250,8 @@ export namespace PerforceService {
             result.info = raw.info.map((entry: any) => {
                 if (typeof entry === "object") {
                     return { ...entry };
+                } else if (typeof entry === "string") {
+                    return entry;
                 }
                 return {};
             });
@@ -324,7 +319,6 @@ export namespace PerforceService {
         const cwd = isDir ? actualResource.fsPath : Path.dirname(actualResource.fsPath);
 
         const env = { ...process.env, PWD: cwd };
-        const spawnArgs: CP.SpawnOptions = { cwd, env };
         // spawnPerforceCommand(
         //     cmd,
         //     allArgs,
@@ -350,117 +344,10 @@ export namespace PerforceService {
     }
 
     interface P4Data {
-        info?: P4Info[];
+        info?: (P4Info | string)[];
         error?: P4Error;
         textBuffer?: Uint8Array;
         binaryBuffer?: Uint8Array;
-    }
-
-    function spawnPerforceCommand(
-        cmd: string,
-        allArgs: string[],
-        spawnArgs: CP.SpawnOptions,
-        responseCallback: (err: Error | null, stdout: string, stderr: string) => void,
-        input?: string,
-        useTerminal?: boolean
-    ) {
-        logExecutedCommand(cmd, allArgs, input, spawnArgs);
-        if (useTerminal) {
-            spawnInTerminal(cmd, allArgs, spawnArgs, responseCallback);
-        } else {
-            spawnNormally(cmd, allArgs, spawnArgs, responseCallback, input);
-        }
-    }
-
-    let spawnedId = 0;
-
-    function spawnNormally(
-        cmd: string,
-        allArgs: string[],
-        spawnArgs: CP.SpawnOptions,
-        responseCallback: (err: Error | null, stdout: string, stderr: string) => void,
-        input?: string
-    ) {
-        const config = workspace.getConfiguration("perforce");
-        const debug = config.get("debugP4Commands", false);
-        const id = ++spawnedId;
-        if (debug) {
-            console.log("[P4 RUN]", id, cmd, allArgs, spawnArgs);
-        }
-
-        const child = spawn(cmd, allArgs, spawnArgs);
-
-        let called = false;
-        child.on("error", (err: Error) => {
-            if (!called) {
-                called = true;
-                if (debug) {
-                    console.log("[P4 ERR]", id, err);
-                }
-                responseCallback(err, "", "");
-            }
-        });
-
-        if (input !== undefined) {
-            if (!child.stdin) {
-                throw new Error("Child does not have standard input");
-            }
-            child.stdin.end(input, "utf8");
-        }
-
-        getResults(child).then((value: string[]) => {
-            if (!called) {
-                if (debug) {
-                    console.log(
-                        "[P4 RES]",
-                        id,
-                        "Stdout:\n" + value[0],
-                        "\n============================",
-                        "\nStderr:\n" + value[1] + "\n"
-                    );
-                }
-                responseCallback(null, value[0] ?? "", value[1] ?? "");
-            }
-        });
-    }
-
-    let taskId = 0;
-
-    async function spawnInTerminal(
-        cmd: string,
-        allArgs: string[],
-        spawnArgs: CP.SpawnOptions,
-        responseCallback: (err: Error | null, stdout: string, stderr: string) => void
-    ) {
-        const editor = configAccessor.resolveP4EDITOR;
-        const env = editor ? { P4EDITOR: editor } : undefined;
-        const quotedArgs = allArgs.map<ShellQuotedString>((arg) => {
-            return {
-                value: arg,
-                quoting: ShellQuoting.Strong,
-            };
-        });
-        const exec = new ShellExecution(cmd, quotedArgs, {
-            cwd: spawnArgs.cwd,
-            env,
-        });
-        try {
-            const myTask = new Task(
-                { type: "perforce" },
-                "Perforce #" + ++taskId,
-                "perforce",
-                exec
-            );
-            await tasks.executeTask(myTask);
-            const disposable: Disposable = tasks.onDidEndTask((task) => {
-                if (task.execution.task.name === myTask.name) {
-                    responseCallback(null, "", "");
-                    disposable.dispose();
-                }
-            });
-        } catch (err) {
-            responseCallback(err as Error, "", "");
-        }
     }
 
     function escapeCommand(args: string[]) {
@@ -483,30 +370,6 @@ export namespace PerforceService {
         Display.channel.appendLine(
             spawnArgs.cwd + ": " + loggedCommand.join(" ") + loggedInput
         );
-    }
-
-    async function getResults(child: CP.ChildProcess): Promise<string[]> {
-        return Promise.all([readStdOut(child), readStdErr(child)]);
-    }
-
-    async function readStdOut(child: CP.ChildProcess) {
-        let output: string = "";
-        if (child.stdout) {
-            for await (const data of child.stdout) {
-                output += data.toString();
-            }
-        }
-        return output;
-    }
-
-    async function readStdErr(child: CP.ChildProcess) {
-        let output: string = "";
-        if (child.stderr) {
-            for await (const data of child.stderr) {
-                output += data.toString();
-            }
-        }
-        return output;
     }
 
     export function handleCommonServiceResponse(

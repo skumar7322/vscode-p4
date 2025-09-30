@@ -11,7 +11,7 @@ declare module "p4node" {
 
     interface P4Instance {
         Connect(): boolean;
-        Run(cmd: string[]): any[];
+        Run(cmd: string[], input?: string): any[];
         RunAsync(cmd: string[], callback: (result: any, error: any) => void): void;
         SetOpts(opts: P4Props): void;
         GetOpts(): P4Props;
