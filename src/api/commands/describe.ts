@@ -167,5 +167,16 @@ export async function getFixedJobs(resource: vscode.Uri, options: GetFixedJobsOp
         chnums: [options.chnum],
         omitDiffs: true,
     });
-    return output[0]?.fixedJobs;
+
+    // Handle the new format where fixedJobs are already structured in the response
+    const describedChangelist = output[0];
+    if (!describedChangelist?.fixedJobs) {
+        return [];
+    }
+
+    // Convert the fixedJobs to match the FixedJob type
+    return describedChangelist.fixedJobs.map((job) => ({
+        id: job.id,
+        description: Array.isArray(job.description) ? job.description : [job.description],
+    }));
 }

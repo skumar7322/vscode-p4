@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as p4 from "./api/PerforceApi";
 import * as Path from "path";
 import { TextEncoder } from "util";
+import { EOL } from "os";
 import { Display } from "./Display";
 import { PerforceSCMProvider } from "./ScmProvider";
 
@@ -10,36 +11,31 @@ type SpecStore = { [key: string]: SpecInstance };
 
 function convertJsonToSpecFormat(jsonText: string): string {
     try {
-        // Parse the JSON array
         const jsonData = JSON.parse(jsonText);
         if (!Array.isArray(jsonData) || jsonData.length === 0) {
-            return jsonText; // Return original if not valid JSON array
+            return jsonText;
         }
 
-        const specData = jsonData[0]; // Take the first object
+        const specData = jsonData[0];
         let specText = "";
-
-        // Handle each field with proper formatting
         Object.keys(specData).forEach((key) => {
             const value = specData[key];
             if (key === "Description") {
                 // Special handling for Description field
-                specText += `${key}:\n`;
+                specText += `${key}:${EOL}`;
                 if (value) {
-                    const lines = value.split("\\n");
+                    const lines = value.split(EOL);
                     lines.forEach((line: string) => {
-                        specText += `\t${line}\n`;
+                        specText += `\t${line}${EOL}`;
                     });
                 }
             } else {
-                // Regular field formatting
-                specText += `${key}:\t${value}\n\n`;
+                specText += `${key}:\t${value}${EOL}${EOL}`;
             }
         });
 
         return specText.trim();
     } catch (error) {
-        // If JSON parsing fails, return original text
         return jsonText;
     }
 }

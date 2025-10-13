@@ -23,10 +23,8 @@ const integrateFlags = flagMapper<IntegratedOptions>(
     { ignoreRevisionFragments: true }
 );
 
-const integratedCommand = makeSimpleCommand(
-    "integrated",
-    integrateFlags
-).ignoringAndHidingStdErr;
+const integratedCommand = makeSimpleCommand("integrated", integrateFlags)
+    .ignoringAndHidingStdErr;
 
 export type IntegratedRevision = {
     fromFile: string;
@@ -45,10 +43,9 @@ function parseIntegratedRevision(line: string): IntegratedRevision | undefined {
     // //depot/branches/branch1/newFile.txt#9 - edit from //depot/TestArea/newFile.txt#3,#4
     // //depot/branches/branch1/newFile.txt#2,#9 - copy into //depot/TestArea/newFile.txt#5
 
-    const matches =
-        /^(.*?)#(\d+)(?:,#(\d+))? - (\S+) (into|from) (.*?)#(\d+)(?:,#(\d+))?$/.exec(
-            line
-        );
+    const matches = /^(.*?)#(\d+)(?:,#(\d+))? - (\S+) (into|from) (.*?)#(\d+)(?:,#(\d+))?$/.exec(
+        line
+    );
 
     if (matches) {
         const [

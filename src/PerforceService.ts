@@ -1,25 +1,15 @@
-import {
-    Disposable,
-    FileType,
-    ShellExecution,
-    ShellQuotedString,
-    ShellQuoting,
-    Task,
-    tasks,
-    Uri,
-    workspace,
-} from "vscode";
+import { FileType, Uri, workspace } from "vscode";
 
 import { Display } from "./Display";
 import * as PerforceUri from "./PerforceUri";
 import { PerforceSCMProvider } from "./ScmProvider";
 
 import * as CP from "child_process";
-import spawn from "cross-spawn";
 import p4Node from "p4node";
 import * as Path from "path";
 import { CommandLimiter } from "./CommandLimiter";
-import { configAccessor } from "./ConfigService";
+import { P4Instance } from "p4node";
+import { error } from "console";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace PerforceService {
@@ -38,39 +28,6 @@ export namespace PerforceService {
             .getConfiguration("perforce", workspaceUri)
             .get<string>("dir");
         return dir === "none" ? undefined : dir;
-    }
-
-    function expandCmdPath(path: string, resource: Uri): string {
-        if (path.includes("${workspaceFolder}")) {
-            const ws =
-                workspace.getWorkspaceFolder(resource) ?? workspace.workspaceFolders?.[0];
-            const sub = ws?.uri.fsPath ?? "";
-            return path.replace("${workspaceFolder}", sub);
-        }
-        return path;
-    }
-
-    function getPerforceCmdPath(resource: Uri): string {
-        let p4Path = workspace.getConfiguration("perforce").get("command", "none");
-
-        if (p4Path === "none" || p4Path === "") {
-            const isWindows = process.platform.startsWith("win");
-            p4Path = isWindows ? "p4.exe" : "p4";
-        } else {
-            const toUNC = (path: string): string => {
-                let uncPath = path;
-
-                if (!uncPath.startsWith("\\\\")) {
-                    const replaceable = uncPath.split("\\");
-                    uncPath = replaceable.join("\\\\");
-                }
-
-                return uncPath;
-            };
-
-            p4Path = toUNC(expandCmdPath(p4Path, resource));
-        }
-        return p4Path;
     }
 
     function getPerforceCmdParams(resource: Uri): string[] {
@@ -192,46 +149,15 @@ export namespace PerforceService {
         useTerminal?: boolean
     ) {
         try {
-            const actualResource = PerforceUri.getUsableWorkspace(resource) ?? resource;
-            const isDir = await isDirectory(actualResource);
-            const cwd = isDir
-                ? actualResource.fsPath
-                : Path.dirname(actualResource.fsPath);
+            const { p4, actualResource, cwd } = await createP4Instance(resource);
 
-            // Initialize p4node with configuration
-            const config = workspace.getConfiguration("perforce", actualResource);
-
-            // Set p4node configuration
-            const p4User = config.get("user", "none");
-            const p4Client = config.get("client", "none");
-            const p4Port = config.get("port", "none");
-
-            // TODO: add better way to handle this props.
-            const p4Props = {
-                cwd,
-                user: p4User !== "none" ? p4User : "skumarSuper",
-                client: p4Client !== "none" ? p4Client : "skumar_frist_temp",
-                port: p4Port !== "none" ? p4Port : "192.168.99.73:1666",
-            };
-
-            // Create p4node instance
-            const p4 = p4Node.New(p4Props);
-
-            // Connect to Perforce
-
-            // Build command arguments
             const cmdArgs = args ? [command, ...args] : [command];
 
-            // Execute command with p4node
-            // if input is not empty or undefined pass it as second argument of p4.Run
             const result = parseP4Data(p4.Run(cmdArgs, input));
 
             // Log the executed command
             const allArgs = getPerforceCmdParams(actualResource).concat(cmdArgs);
             logExecutedCommand("p4", allArgs, input, { cwd });
-
-            // Handle result - p4node returns array of objects
-            // Dont parse here just return the result with understandable datastructure
 
             responseCallback(result);
             return;
@@ -240,6 +166,46 @@ export namespace PerforceService {
             console.warn("p4node API failed, falling back to CLI:", error);
             // Fall through to CLI implementation below
         }
+    }
+
+    export async function setInput(input: string, resource: Uri): Promise<void> {
+        if (!input) {
+            return;
+        }
+        try {
+            const { p4 } = await createP4Instance(resource);
+            p4.SetInput(input);
+        } catch (error) {
+            console.error("Error setting input for Perforce command:", error);
+        }
+    }
+
+    async function createP4Instance(
+        resource: Uri
+    ): Promise<{ p4: P4Instance; actualResource: Uri; cwd: string }> {
+        const actualResource = PerforceUri.getUsableWorkspace(resource) ?? resource;
+        const isDir = await isDirectory(actualResource);
+        const cwd = isDir ? actualResource.fsPath : Path.dirname(actualResource.fsPath);
+
+        // Initialize p4node with configuration
+        const config = workspace.getConfiguration("perforce", actualResource);
+
+        // Set p4node configuration
+        const p4User = config.get("user", "none");
+        const p4Client = config.get("client", "none");
+        const p4Port = config.get("port", "none");
+
+        // TODO: add better way to handle this props.
+        const p4Props = {
+            cwd,
+            user: p4User !== "none" ? p4User : "skumarSuper",
+            client: p4Client !== "none" ? p4Client : "skumar_frist_temp",
+            port: p4Port !== "none" ? p4Port : "192.168.1.4:1666",
+        };
+
+        // Create p4node instance
+        const p4 = p4Node.New(p4Props);
+        return { p4, actualResource, cwd };
     }
 
     function parseP4Data(raw: any): P4Data {
@@ -303,30 +269,6 @@ export namespace PerforceService {
                 console.warn("p4node API failed, falling back to CLI:", error);
             }
         }
-
-        // Fallback to original CLI spawning for terminal operations or if p4node fails
-        const actualResource = PerforceUri.getUsableWorkspace(resource) ?? resource;
-        const cmd = getPerforceCmdPath(actualResource);
-
-        const allArgs: string[] = getPerforceCmdParams(actualResource);
-        allArgs.push(command);
-
-        if (args) {
-            allArgs.push(...args);
-        }
-
-        const isDir = await isDirectory(actualResource);
-        const cwd = isDir ? actualResource.fsPath : Path.dirname(actualResource.fsPath);
-
-        const env = { ...process.env, PWD: cwd };
-        // spawnPerforceCommand(
-        //     cmd,
-        //     allArgs,
-        //     spawnArgs,
-        //     responseCallback,
-        //     input,
-        //     useTerminal
-        // );
     }
 
     //P4 Data Structure
@@ -343,7 +285,7 @@ export namespace PerforceService {
         [key: string]: any; //any number of key of type string, with any type value
     }
 
-    interface P4Data {
+    export interface P4Data {
         info?: (P4Info | string)[];
         error?: P4Error;
         textBuffer?: Uint8Array;
@@ -418,21 +360,19 @@ export namespace PerforceService {
         return new Promise((resolve, reject) => {
             PerforceService.executeAsPromise(resource, "set", ["-q"])
                 .then((stdout) => {
-                    let configIndex =
-                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                            "P4CONFIG="
-                        );
+                    let configIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                        "P4CONFIG="
+                    );
                     if (configIndex === -1) {
                         resolve(undefined);
                         return;
                     }
 
                     configIndex += "P4CONFIG=".length;
-                    const endConfigIndex =
-                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                            "\n",
-                            configIndex
-                        );
+                    const endConfigIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                        "\n",
+                        configIndex
+                    );
                     if (endConfigIndex === -1) {
                         //reject("P4 set -q parsing for P4CONFIG contains unexpected format");
                         resolve(undefined);
@@ -447,21 +387,19 @@ export namespace PerforceService {
                     );
                 })
                 .catch((err) => {
-                    let configIndex =
-                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                            "P4CONFIG="
-                        );
+                    let configIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                        "P4CONFIG="
+                    );
                     if (configIndex === -1) {
                         resolve(undefined);
                         return;
                     }
 
                     configIndex += "P4CONFIG=".length;
-                    const endConfigIndex =
-                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                            "\n",
-                            configIndex
-                        );
+                    const endConfigIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                        "\n",
+                        configIndex
+                    );
                     if (endConfigIndex === -1) {
                         //reject("P4 set -q parsing for P4CONFIG contains unexpected format");
                         resolve(undefined);

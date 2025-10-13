@@ -146,7 +146,10 @@ function isResolveWarning(obj: any): obj is ResolveWarning {
     return obj && obj.depotPath !== undefined && obj.resolvePath !== undefined;
 }
 
-function parseResolveMessage(item: object): ResolveWarning | undefined {
+function parseResolveMessage(item: { raw?: string }): ResolveWarning | undefined {
+    if (!item.raw) {
+        return undefined;
+    }
     const matches = /(.*?) - must resolve (.*?) before submitting/.exec(item.raw);
     if (matches) {
         const [, depotPath, resolvePath] = matches;

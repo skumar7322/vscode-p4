@@ -19,7 +19,7 @@ chai.use(chaiAsPromised);
 function basicExecuteStub(
     _resource: vscode.Uri,
     command: string,
-    responseCallback: (err: Error | null, stdout: string, stderr: string) => void,
+    responseCallback: (result: PerforceService.P4Data) => void,
     args?: string[],
     _input?: string,
     _useTerminal?: boolean
@@ -28,16 +28,30 @@ function basicExecuteStub(
     if (args && args.length > 0) {
         out += " " + args.join(" ");
     }
-    setImmediate(() => responseCallback(null, out, ""));
+    const result: PerforceService.P4Data = {
+        info: [out],
+    };
+    setImmediate(() => responseCallback(result));
 }
 
 function execWithResult(err: Error | null, stdout: string, stderr: string) {
     return (
         _resource: any,
         _command: string,
-        responseCallback: (err: Error | null, stdout: string, stderr: string) => void
+        responseCallback: (result: PerforceService.P4Data) => void
     ) => {
-        setImmediate(() => responseCallback(err, stdout, stderr));
+        const result: PerforceService.P4Data = {};
+        if (err) {
+            result.error = { message: err.message };
+        } else {
+            if (stdout) {
+                result.info = [stdout];
+            }
+            if (stderr && !stdout) {
+                result.error = { message: stderr };
+            }
+        }
+        setImmediate(() => responseCallback(result));
     };
 }
 

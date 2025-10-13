@@ -7,7 +7,7 @@ import {
     splitIntoLines,
 } from "../CommandUtils";
 import { RawField, ChangeSpec } from "../CommonTypes";
-import { getBasicField, parseSpecOutput } from "../SpecParser";
+import { getBasicField, parseSpecString } from "../SpecParser";
 
 function mapToChangeFields(rawFields: RawField[]): ChangeSpec {
     return {
@@ -28,7 +28,7 @@ function mapToChangeFields(rawFields: RawField[]): ChangeSpec {
     };
 }
 
-const parseChangeSpec = pipe(parseSpecOutput, mapToChangeFields);
+const parseChangeSpec = pipe(parseSpecString, mapToChangeFields);
 
 export type ChangeSpecOptions = {
     existingChangelist?: string;
@@ -102,18 +102,15 @@ const inputChange = makeSimpleCommand(
     () => ["-i"],
     (options: InputChangeSpecOptions) => {
         return {
-            input:
-                getDefinedSpecFields(options.spec)
-                    .concat(
-                        options.spec.rawFields.filter(
-                            (field) =>
-                                !options.spec[
-                                    field.name.toLowerCase() as keyof ChangeSpec
-                                ]
-                        )
+            input: getDefinedSpecFields(options.spec)
+                .concat(
+                    options.spec.rawFields.filter(
+                        (field) =>
+                            !options.spec[field.name.toLowerCase() as keyof ChangeSpec]
                     )
-                    .map((field) => field.name + ":\t" + field.value.join("\n\t"))
-                    .join("\n\n") + "\n\n", // perforce doesn't like an empty raw field on the end without newlines
+                )
+                .map((field) => field.name + ":\t" + field.value.join("\n\t"))
+                .join("\n\n"), // perforce doesn't like an empty raw field on the end without newlines
         };
     }
 );
