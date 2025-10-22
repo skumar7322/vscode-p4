@@ -195,12 +195,11 @@ export namespace PerforceService {
         const p4Client = config.get("client", "none");
         const p4Port = config.get("port", "none");
 
-        // TODO: add better way to handle this props.
         const p4Props = {
             cwd,
-            user: p4User !== "none" ? p4User : "skumarSuper",
-            client: p4Client !== "none" ? p4Client : "skumar_frist_temp",
-            port: p4Port !== "none" ? p4Port : "192.168.1.4:1666",
+            user: p4User,
+            client: p4Client,
+            port: p4Port,
         };
 
         // Create p4node instance

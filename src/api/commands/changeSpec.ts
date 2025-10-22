@@ -14,7 +14,7 @@ function mapToChangeFields(rawFields: RawField[]): ChangeSpec {
         change: getBasicField(rawFields, "Change")?.[0].trim(),
         description: getBasicField(rawFields, "Description")?.join("\n"),
         files: getBasicField(rawFields, "Files")?.map((file) => {
-            // exmample:
+            // example:
             //   //depot/TestArea/doc3.txt       # add
             //   //depot/TestArea/My initial text document.txt   # edit
             //   //depot/TestArea/my next document.txt   # delete
