@@ -8,7 +8,14 @@ src/**
 **/*.map
 .gitignore
 tsconfig.json
-node_modules
+node_modules/**
+!node_modules/p4node/**
+!node_modules/p4node-darwin-arm64/**
+!node_modules/p4node-darwin-x64/**
+!node_modules/p4node-linux-x64/**
+!node_modules/p4node-linux-arm64/**
+!node_modules/p4node-win32-x64/**
+!node_modules/p4node-win32-arm64/**
 out/
 webpack.config.js
 reports/

@@ -174,7 +174,7 @@ export namespace PerforceService {
         }
         try {
             const { p4 } = await createP4Instance(resource);
-            p4.SetInput(input);
+            // p4.SetInput(input); // Need to fix this
         } catch (error) {
             console.error("Error setting input for Perforce command:", error);
         }

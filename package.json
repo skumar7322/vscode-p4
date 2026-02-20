@@ -2021,6 +2021,12 @@
             }
         ]
     },
+    "dependencies": {
+        "p4node": "file:/Users/sandeep.kumar/work/codebase/p4node/main/binaries/p4node"
+    },
+    "optionalDependencies": {
+        "p4node-darwin-arm64": "file:/Users/sandeep.kumar/work/codebase/p4node/main/binaries/p4node-darwin-arm64"
+    },
     "devDependencies": {
         "@arrows/composition": "^1.2.2",
         "@types/chai": "^4.2.10",
