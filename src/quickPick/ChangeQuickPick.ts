@@ -93,7 +93,7 @@ async function unshelveAndRefresh(resource: vscode.Uri, options: p4.UnshelveOpti
             }
         }
     } catch (err) {
-        Display.showImportantError(err);
+        Display.showImportantError(String(err));
         PerforceSCMProvider.RefreshAll();
     }
 }
@@ -332,7 +332,7 @@ async function searchForBranch(
             { placeHolder: "Choose a matching branch" }
         );
     } catch (err) {
-        Display.showImportantError(err);
+        Display.showImportantError(String(err));
     }
 }
 

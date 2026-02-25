@@ -17,7 +17,7 @@ const annotateFlags = flagMapper<AnnotateOptions>(
         ["i", "followBranches"],
     ],
     "file",
-    ["-q"]
+    ["-q"],
 );
 
 const annotateCommand = makeSimpleCommand(P4Commands.ANNOTATE, annotateFlags);
@@ -29,12 +29,21 @@ export type Annotation = {
     date?: string;
 };
 
+interface RawAnnotateItem {
+    data?: string;
+    lower?: string;
+    revision?: string;
+    change?: string;
+    user?: string;
+    date?: string;
+}
+
 function parseAnnotateOutput(
     output: string,
-    withUser?: boolean
+    withUser?: boolean,
 ): (Annotation | undefined)[] {
-    const parsed = JSON.parse(output);
-    return parsed.map((item: any) => {
+    const parsed = JSON.parse(output) as (RawAnnotateItem | null)[];
+    return parsed.map((item) => {
         if (!item) {
             return undefined;
         }
@@ -44,7 +53,7 @@ function parseAnnotateOutput(
             revisionOrChnum: item.lower || item.revision || item.change || "",
             user: withUser ? item.user : undefined,
             date: withUser ? item.date : undefined,
-        } as Annotation;
+        };
     });
 }
 

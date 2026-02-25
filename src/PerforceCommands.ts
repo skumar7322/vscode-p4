@@ -30,7 +30,6 @@ import { splitBy, pluralise, isTruthy } from "./TsUtils";
 import { perforceFsProvider } from "./FileSystemProvider";
 import { showRevChooserForFile } from "./quickPick/FileQuickPick";
 import { changeSpecEditor, jobSpecEditor } from "./SpecEditor";
-import { stderr } from "process";
 
 // TODO resolve
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -51,7 +50,7 @@ export namespace PerforceCommands {
         commands.registerCommand("perforce.explorer.revert", revertExplorerFiles);
         commands.registerCommand(
             "perforce.explorer.revertUnchanged",
-            revertExplorerFilesUnchanged
+            revertExplorerFilesUnchanged,
         );
         commands.registerCommand("perforce.explorer.delete", deleteExplorerFiles);
         commands.registerCommand("perforce.move", moveOpenFile);
@@ -80,8 +79,8 @@ export namespace PerforceCommands {
         subscriptions.push(
             commands.registerCommand(
                 "perforce.editAndSave",
-                editAndSaveOpenFileOrPassthrough
-            )
+                editAndSaveOpenFileOrPassthrough,
+            ),
         );
     }
 
@@ -132,11 +131,11 @@ export namespace PerforceCommands {
                         location: ProgressLocation.Notification,
                         title: "Perforce: Opening file for edit",
                     },
-                    () => p4edit(activeFile.uri)
+                    () => p4edit(activeFile.uri),
                 );
             } catch (err) {
                 // ensure save always happens even if something goes wrong
-                Display.showError(err);
+                Display.showError(String(err));
             }
 
             await activeFile.save();
@@ -194,7 +193,7 @@ export namespace PerforceCommands {
         const filename = PerforceUri.basenameWithoutRev(fileUri);
         const ok = await Display.requestConfirmation(
             "Are you sure you want to revert " + filename + "?",
-            "Revert " + filename
+            "Revert " + filename,
         );
 
         if (ok) {
@@ -229,7 +228,7 @@ export namespace PerforceCommands {
 
         if (window.activeTextEditor?.document.isDirty) {
             Display.showModalMessage(
-                "The active document has unsaved changes. Save the file first!"
+                "The active document has unsaved changes. Save the file first!",
             );
             return;
         }
@@ -278,7 +277,7 @@ export namespace PerforceCommands {
 
     function didChangeHaveRev(uri: Uri) {
         perforceFsProvider()?.requestUpdatedDocument(
-            PerforceUri.fromUriWithRevision(uri, "have")
+            PerforceUri.fromUriWithRevision(uri, "have"),
         );
     }
 
@@ -310,7 +309,7 @@ export namespace PerforceCommands {
             const chosen = PerforceUri.fromDepotPath(
                 file,
                 revision.file,
-                revision.revision
+                revision.revision,
             );
             try {
                 await p4.sync(file, { files: [chosen] });
@@ -324,7 +323,7 @@ export namespace PerforceCommands {
     function withExplorerProgress(func: () => Promise<any>) {
         return window.withProgress(
             { location: { viewId: "workbench.view.explorer" } },
-            func
+            func,
         );
     }
 
@@ -334,7 +333,7 @@ export namespace PerforceCommands {
             file,
             files,
             (dirFiles, resource) => p4.sync(resource, { files: dirFiles }),
-            { message: "Sync complete", hideSubErrors: true }
+            { message: "Sync complete", hideSubErrors: true },
         );
     }
 
@@ -345,7 +344,7 @@ export namespace PerforceCommands {
             await p4.edit.ignoringAndHidingStdErr(file, { files: [fromWild] });
             await p4.move(file, { fromToFile: [fromWild, toWild] });
         } catch (err) {
-            Display.showImportantError(err.toString());
+            Display.showImportantError(String(err));
         }
     }
 
@@ -354,7 +353,7 @@ export namespace PerforceCommands {
             await p4.edit.ignoringAndHidingStdErr(file, { files: [file] });
             await p4.move(file, { fromToFile: [file, newFsPath] });
         } catch (err) {
-            Display.showImportantError(err.toString());
+            Display.showImportantError(String(err));
         }
     }
 
@@ -379,7 +378,7 @@ export namespace PerforceCommands {
         const differentDir = files.find((file) => Path.dirname(file.fsPath) !== dirname);
         if (differentDir) {
             Display.showModalMessage(
-                "To move multiple files, all moved files must be within the same folder"
+                "To move multiple files, all moved files must be within the same folder",
             );
             return;
         }
@@ -391,12 +390,12 @@ export namespace PerforceCommands {
         });
         if (newPath) {
             const promises = files.map((file) =>
-                moveOne(file, Path.join(newPath, Path.basename(file.fsPath)))
+                moveOne(file, Path.join(newPath, Path.basename(file.fsPath))),
             );
             try {
                 await withExplorerProgress(() => Promise.all(promises));
             } catch (err) {
-                Display.showImportantError(err.toString());
+                Display.showImportantError(String(err));
             }
             PerforceSCMProvider.RefreshAll();
         }
@@ -421,7 +420,7 @@ export namespace PerforceCommands {
                     await window.showTextDocument(Uri.file(newPath));
                 }
             } catch (err) {
-                Display.showImportantError(err.toString());
+                Display.showImportantError(String(err));
             }
             PerforceSCMProvider.RefreshAll();
         }
@@ -433,7 +432,7 @@ export namespace PerforceCommands {
         } else {
             await moveRenameSingleFileOrDir(
                 selected,
-                window.activeTextEditor?.document.uri.fsPath === selected.fsPath
+                window.activeTextEditor?.document.uri.fsPath === selected.fsPath,
             );
         }
     }
@@ -459,7 +458,7 @@ export namespace PerforceCommands {
                     isDir: fileIsDir,
                     dir: fileIsDir ? file : Uri.file(Path.dirname(file.fsPath)),
                 };
-            })
+            }),
         );
     }
 
@@ -470,7 +469,7 @@ export namespace PerforceCommands {
         options?: {
             message?: string;
             hideSubErrors?: boolean;
-        }
+        },
     ) {
         const files = consolidateUris(selected, all);
         const filesByDir = await mapToFilesByDir(files);
@@ -480,11 +479,11 @@ export namespace PerforceCommands {
                 try {
                     await op(
                         dirFiles.map((file) => file.file),
-                        dirFiles[0].dir
+                        dirFiles[0].dir,
                     );
                 } catch (err) {
                     if (!options?.hideSubErrors) {
-                        Display.showImportantError(err);
+                        Display.showImportantError(String(err));
                     }
                     throw err;
                 } finally {
@@ -494,7 +493,7 @@ export namespace PerforceCommands {
                         }
                     });
                 }
-            }
+            },
         );
 
         try {
@@ -507,19 +506,20 @@ export namespace PerforceCommands {
 
     export function addExplorerFiles(selected: Uri | string, all?: Uri[]) {
         return explorerOperationByDir(selected, all, (dirFiles, resource) =>
-            p4.add(resource, { files: dirFiles })
+            p4.add(resource, { files: dirFiles }),
         );
     }
 
     export function editExplorerFiles(selected: Uri | string, all?: Uri[]) {
         return explorerOperationByDir(selected, all, (dirFiles, resource) =>
-            p4.edit(resource, { files: dirFiles })
+            p4.edit(resource, { files: dirFiles }),
         );
     }
 
     async function fileAndFolderCount(files: Uri[]) {
-        const dirCount = (await Promise.all(files.map((f) => isDir(f)))).filter(isTruthy)
-            .length;
+        const dirCount = (await Promise.all(files.map((f) => isDir(f)))).filter(
+            isTruthy,
+        ).length;
         const fileCount = files.length - dirCount;
         const items = [
             fileCount > 0 ? pluralise(fileCount, "file") : undefined,
@@ -533,14 +533,14 @@ export namespace PerforceCommands {
         const allPlural = await fileAndFolderCount(allFiles);
         const ok = await Display.requestConfirmation(
             "Are you sure you want to revert " + allPlural + "?",
-            "Revert " + allPlural
+            "Revert " + allPlural,
         );
         if (ok) {
             await explorerOperationByDir(
                 selected,
                 all,
                 (dirFiles, resource) => p4.revert(resource, { paths: dirFiles }),
-                { hideSubErrors: true }
+                { hideSubErrors: true },
             );
         }
     }
@@ -551,7 +551,7 @@ export namespace PerforceCommands {
             all,
             (dirFiles, resource) =>
                 p4.revert(resource, { paths: dirFiles, unchanged: true }),
-            { hideSubErrors: true }
+            { hideSubErrors: true },
         );
     }
 
@@ -562,11 +562,11 @@ export namespace PerforceCommands {
             "Are you sure you want to delete " +
                 allPlural +
                 "?\nThis operation does not revert open files",
-            "Delete " + allPlural
+            "Delete " + allPlural,
         );
         if (ok) {
             await explorerOperationByDir(selected, all, (dirFiles, resource) =>
-                p4.del(resource, { paths: dirFiles })
+                p4.del(resource, { paths: dirFiles }),
             );
         }
     }
@@ -704,7 +704,7 @@ export namespace PerforceCommands {
                 cancellable: false,
                 title: "Generating annotations",
             },
-            () => AnnotationProvider.annotate(uri)
+            () => AnnotationProvider.annotate(uri),
         );
     }
 
@@ -720,7 +720,7 @@ export namespace PerforceCommands {
             // try to find the proper workspace
             if (window.activeTextEditor && window.activeTextEditor.document) {
                 const wksFolder = workspace.getWorkspaceFolder(
-                    window.activeTextEditor.document.uri
+                    window.activeTextEditor.document.uri,
                 );
                 if (wksFolder) {
                     resource = wksFolder.uri;
@@ -728,7 +728,7 @@ export namespace PerforceCommands {
             }
         }
 
-        PerforceService.execute(resource, "opened", (result) => {
+        PerforceService.execute(resource, "opened", (_result) => {
             //p4-node
             const err = false;
             const stderr = false;
@@ -770,7 +770,7 @@ export namespace PerforceCommands {
                                         },
                                         (reason) => {
                                             Display.showError(reason);
-                                        }
+                                        },
                                     );
                                 }
                             })
@@ -794,7 +794,7 @@ export namespace PerforceCommands {
             PerforceService.execute(
                 resource,
                 "where",
-                (result) => {
+                (_result) => {
                     const err = false;
                     const stderr = false;
                     if (err) {
@@ -807,7 +807,7 @@ export namespace PerforceCommands {
                         resolve("stdout".toString());
                     }
                 },
-                args
+                args,
             );
         });
     }

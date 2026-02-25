@@ -51,13 +51,14 @@ function parseFstatOutput(fstatOutput: string): FstatInfo[] {
         console.error("Failed to parse fstat output:", error);
         // Fallback to original parsing method for non-JSON input
         const all = splitIntoSections(fstatOutput.trim()).map((file) =>
-            parseFstatSection(file)
+            parseFstatSection(file),
         );
         return all;
     }
 }
 
-function parseFstatOutputToMap(fstatOutput: string): Map<string, string> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _parseFstatOutputToMap(fstatOutput: string): Map<string, string> {
     const map = new Map<string, string>();
     try {
         // Parse the string into a JSON array
@@ -84,7 +85,7 @@ const fstatFlags = flagMapper<FstatOptions>(
         ["Ro", "limitToOpened"],
         ["Rc", "limitToClient"],
     ],
-    "depotPaths"
+    "depotPaths",
 );
 
 const fstatBasic = makeSimpleCommand("fstat", fstatFlags).ignoringStdErr;
@@ -92,7 +93,7 @@ const fstatBasic = makeSimpleCommand("fstat", fstatFlags).ignoringStdErr;
 export async function getFstatInfo(resource: vscode.Uri, options: FstatOptions) {
     const chunks = splitIntoChunks(options.depotPaths);
     const promises = chunks.map((paths) =>
-        fstatBasic(resource, { ...options, ...{ depotPaths: paths } })
+        fstatBasic(resource, { ...options, ...{ depotPaths: paths } }),
     );
 
     const fstats = await Promise.all(promises);

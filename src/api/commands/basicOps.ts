@@ -1,9 +1,4 @@
-import {
-    flagMapper,
-    makeSimpleCommand,
-    asyncOuputHandler,
-    splitIntoLines,
-} from "../CommandUtils";
+import { flagMapper, makeSimpleCommand, asyncOuputHandler } from "../CommandUtils";
 import { PerforceFile, NoOpts } from "../CommonTypes";
 import * as vscode from "vscode";
 import * as PerforceUri from "../../PerforceUri";
@@ -31,7 +26,7 @@ const submitFlags = flagMapper<SubmitChangelistOptions>(
         ["c", "chnum"],
         ["d", "description"],
     ],
-    "file"
+    "file",
 );
 
 // TODO: Submit Changelist test
@@ -49,7 +44,7 @@ function parseSubmitOutput(output: string) {
 
 export const submitChangelist = asyncOuputHandler(
     submitChangelistCommand,
-    parseSubmitOutput
+    parseSubmitOutput,
 );
 
 export interface RevertOptions {
@@ -65,7 +60,7 @@ const revertFlags = flagMapper<RevertOptions>(
     ],
     "paths",
     undefined,
-    { ignoreRevisionFragments: true }
+    { ignoreRevisionFragments: true },
 );
 
 export const revert = makeSimpleCommand("revert", revertFlags, () => {
@@ -98,7 +93,7 @@ const shelveFlags = flagMapper<ShelveOptions>(
         ["d", "delete"],
         ["c", "chnum"],
     ],
-    "paths"
+    "paths",
 );
 
 export const shelve = makeSimpleCommand("shelve", shelveFlags, () => {
@@ -120,7 +115,7 @@ const unshelveFlags = flagMapper<UnshelveOptions>(
         ["c", "toChnum"],
         ["b", "branchMapping"],
     ],
-    "paths"
+    "paths",
 );
 
 export type UnshelvedFiles = {
@@ -209,7 +204,7 @@ const fixJobFlags = flagMapper<FixJobOptions>(
         ["c", "chnum"],
         ["d", "removeFix"],
     ],
-    "jobId"
+    "jobId",
 );
 
 export const fixJob = makeSimpleCommand("fix", fixJobFlags);
@@ -334,7 +329,7 @@ export const login = makeSimpleCommand(
         return {
             input: options.password,
         };
-    }
+    },
 );
 
 const getLoggedInStatus = makeSimpleCommand<NoOpts>("login", () => ["-s"]);
@@ -369,7 +364,7 @@ const resolveFlags = flagMapper<ResolveOptions>(
     [],
     {
         ignoreRevisionFragments: true,
-    }
+    },
 );
 
 export const resolve = makeSimpleCommand("resolve", resolveFlags, () => {

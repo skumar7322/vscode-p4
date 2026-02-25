@@ -3,6 +3,7 @@
 "use strict";
 
 const path = require("path");
+const ESLintPlugin = require("eslint-webpack-plugin");
 
 /**@type {import('webpack').Configuration}*/
 const config = {
@@ -39,21 +40,20 @@ const config = {
                     {
                         loader: "ts-loader",
                     },
-                    {
-                        loader: "eslint-loader",
-                    },
-                ],
-            },
-            {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                use: [
-                    {
-                        loader: "eslint-loader",
-                    },
                 ],
             },
         ],
     },
+    plugins: [
+        new ESLintPlugin({
+            extensions: ["ts", "js"],
+            exclude: "node_modules",
+            configType: "eslintrc",
+            failOnError: false,
+            failOnWarning: false,
+            emitError: false,
+            emitWarning: true,
+        }),
+    ],
 };
 module.exports = config;

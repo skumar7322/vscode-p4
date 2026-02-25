@@ -8,13 +8,12 @@ import * as CP from "child_process";
 import p4Node, { PerforceNodeApi, P4Result } from "p4node";
 import * as Path from "path";
 import { CommandLimiter } from "./CommandLimiter";
-import { error } from "console";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace PerforceService {
     const limiter: CommandLimiter = new CommandLimiter(
         workspace.getConfiguration("perforce").get<number>("bottleneck.maxConcurrent") ??
-            10
+            10,
     );
 
     const debugModeActive: boolean =
@@ -65,7 +64,7 @@ export namespace PerforceService {
         responseCallback: (result: P4Data) => void,
         args?: string[],
         input?: string,
-        useTerminal?: boolean
+        useTerminal?: boolean,
     ): void {
         if (debugModeActive && !debugModeSetup) {
             limiter.debugMode = true;
@@ -85,9 +84,9 @@ export namespace PerforceService {
                         },
                         args,
                         input,
-                        useTerminal
+                        useTerminal,
                     ),
-                `<JOB_ID:${++id}:${command}>`
+                `<JOB_ID:${++id}:${command}>`,
             )
             .catch((err) => {
                 console.error("Error while running perforce command:", err);
@@ -105,7 +104,7 @@ export namespace PerforceService {
         resource: Uri,
         command: string,
         args?: string[],
-        input?: string
+        input?: string,
     ): Promise<string> {
         return new Promise((resolve, reject) => {
             execute(
@@ -123,7 +122,7 @@ export namespace PerforceService {
                     }
                 },
                 args,
-                input
+                input,
             );
         });
     }
@@ -140,7 +139,7 @@ export namespace PerforceService {
     }
 
     async function createP4Instance(
-        resource: Uri
+        resource: Uri,
     ): Promise<{ p4: PerforceNodeApi; actualResource: Uri; cwd: string }> {
         const actualResource = PerforceUri.getUsableWorkspace(resource) ?? resource;
         const isDir = await isDirectory(actualResource);
@@ -172,7 +171,7 @@ export namespace PerforceService {
         responseCallback: (result: P4Data) => void,
         args?: string[],
         input?: string,
-        useTerminal?: boolean
+        _useTerminal?: boolean,
     ) {
         try {
             const { p4, actualResource, cwd } = await createP4Instance(resource);
@@ -201,7 +200,7 @@ export namespace PerforceService {
         // Parse 'info' info will always be array
         if (Array.isArray(raw.info)) {
             result.info = raw.info.map((entry) =>
-                typeof entry === "string" ? entry : { ...entry }
+                typeof entry === "string" ? entry : { ...entry },
             );
         }
 
@@ -255,7 +254,7 @@ export namespace PerforceService {
         cmd: string,
         args: string[],
         input: string | undefined,
-        spawnArgs: CP.SpawnOptions
+        spawnArgs: CP.SpawnOptions,
     ) {
         // not necessarily using these escaped values, because cross-spawn does its own escaping,
         // but no sensible way of logging the unescaped array for a user. The output command line
@@ -265,14 +264,14 @@ export namespace PerforceService {
         const censoredInput = args[0].includes("login") ? "***" : input;
         const loggedInput = input ? " < " + censoredInput : "";
         Display.channel.appendLine(
-            spawnArgs.cwd + ": " + loggedCommand.join(" ") + loggedInput
+            spawnArgs.cwd + ": " + loggedCommand.join(" ") + loggedInput,
         );
     }
 
     export function handleCommonServiceResponse(
         err: Error | null,
         stdout: string,
-        stderr: string
+        stderr: string,
     ) {
         if (err || stderr) {
             Display.showError(stderr.toString());
@@ -302,7 +301,7 @@ export namespace PerforceService {
 
                     //Resolve with client root as string
                     resolve(
-                        stdout.substring(clientRootIndex, endClientRootIndex).trimRight()
+                        stdout.substring(clientRootIndex, endClientRootIndex).trimRight(),
                     );
                 })
                 .catch((err) => {
@@ -312,22 +311,24 @@ export namespace PerforceService {
     }
 
     export function getConfigFilename(resource: Uri): Promise<string | undefined> {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, _reject) => {
             PerforceService.executeAsPromise(resource, "set", ["-q"])
-                .then((stdout) => {
-                    let configIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                        "P4CONFIG="
-                    );
+                .then((_stdout) => {
+                    let configIndex =
+                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                            "P4CONFIG=",
+                        );
                     if (configIndex === -1) {
                         resolve(undefined);
                         return;
                     }
 
                     configIndex += "P4CONFIG=".length;
-                    const endConfigIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                        "\n",
-                        configIndex
-                    );
+                    const endConfigIndex =
+                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                            "\n",
+                            configIndex,
+                        );
                     if (endConfigIndex === -1) {
                         //reject("P4 set -q parsing for P4CONFIG contains unexpected format");
                         resolve(undefined);
@@ -338,23 +339,25 @@ export namespace PerforceService {
                     resolve(
                         "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt"
                             .substring(configIndex, endConfigIndex)
-                            .trimRight()
+                            .trimRight(),
                     );
                 })
-                .catch((err) => {
-                    let configIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                        "P4CONFIG="
-                    );
+                .catch((_err) => {
+                    let configIndex =
+                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                            "P4CONFIG=",
+                        );
                     if (configIndex === -1) {
                         resolve(undefined);
                         return;
                     }
 
                     configIndex += "P4CONFIG=".length;
-                    const endConfigIndex = "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
-                        "\n",
-                        configIndex
-                    );
+                    const endConfigIndex =
+                        "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt".indexOf(
+                            "\n",
+                            configIndex,
+                        );
                     if (endConfigIndex === -1) {
                         //reject("P4 set -q parsing for P4CONFIG contains unexpected format");
                         resolve(undefined);
@@ -365,7 +368,7 @@ export namespace PerforceService {
                     resolve(
                         "/Users/sandeep.kumar/work/localServerIpClient/first/.p4config.txt"
                             .substring(configIndex, endConfigIndex)
-                            .trimRight()
+                            .trimRight(),
                     );
                 });
         });

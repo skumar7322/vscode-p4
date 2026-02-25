@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { flagMapper, makeSimpleCommand } from "../CommandUtils";
 import { FixedJob, ChangeInfo } from "../CommonTypes";
-import { isTruthy, parseDate } from "../../TsUtils";
+import { isTruthy } from "../../TsUtils";
 
 export interface DescribeOptions {
     chnums: string[];
@@ -16,7 +16,7 @@ const describeFlags = flagMapper<DescribeOptions>(
     ],
     "chnums",
     [],
-    { lastArgIsFormattedArray: true }
+    { lastArgIsFormattedArray: true },
 );
 
 const describeCommand = makeSimpleCommand("describe", describeFlags);
@@ -47,7 +47,7 @@ function populateFiles(files: DepotFileOperation[], changeData: any): void {
 
 function parseDescribeChangelist(
     changeData: any,
-    options?: DescribeOptions
+    options?: DescribeOptions,
 ): DescribedChangelist | undefined {
     if (!changeData || typeof changeData !== "object") {
         return undefined;
@@ -94,7 +94,7 @@ function parseDescribeChangelist(
 
 function parseDescribeOutput(
     output: string,
-    options?: DescribeOptions
+    options?: DescribeOptions,
 ): DescribedChangelist[] {
     const jsonData = JSON.parse(output);
     if (!Array.isArray(jsonData)) {
@@ -107,7 +107,7 @@ function parseDescribeOutput(
 
 export async function describe(
     resource: vscode.Uri,
-    options: DescribeOptions
+    options: DescribeOptions,
 ): Promise<DescribedChangelist[]> {
     const output = await describeCommand(resource, options);
     return parseDescribeOutput(output, options);
@@ -145,7 +145,7 @@ function extractDepotFiles(changeData: any): string[] {
 
 export async function getShelvedFiles(
     resource: vscode.Uri,
-    options: GetShelvedOptions
+    options: GetShelvedOptions,
 ): Promise<ShelvedChangeInfo[]> {
     if (options.chnums.length === 0) {
         return [];

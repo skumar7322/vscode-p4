@@ -164,7 +164,7 @@ export default class FileSystemActions {
             );
         } catch (err) {
             // still try to revert
-            Display.channel.appendLine(err);
+            Display.channel.appendLine(String(err));
         }
         return false;
     }

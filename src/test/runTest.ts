@@ -1,6 +1,6 @@
 import * as path from "path";
 
-import { runTests } from "vscode-test";
+import { runTests } from "@vscode/test-electron";
 
 type Env = { [key: string]: string };
 type Params = { [key: string]: string | boolean };

@@ -200,7 +200,7 @@ describe("Command Limiter (unit)", () => {
 
             const p1 = cl.submit(
                 (c) =>
-                    new Promise((res) =>
+                    new Promise<void>((res) =>
                         setTimeout(() => {
                             c1(c);
                             res();
@@ -213,7 +213,7 @@ describe("Command Limiter (unit)", () => {
 
             const p2 = cl.submit(
                 (c) =>
-                    new Promise((res) =>
+                    new Promise<void>((res) =>
                         setTimeout(() => {
                             c2(c);
                             res();

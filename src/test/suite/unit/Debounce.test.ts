@@ -11,7 +11,7 @@ chai.use(sinonChai);
 chai.use(chaiAsPromised);
 
 function timeout(ms: number) {
-    return new Promise((res) => {
+    return new Promise<void>((res) => {
         setTimeout(() => {
             res();
         }, ms);

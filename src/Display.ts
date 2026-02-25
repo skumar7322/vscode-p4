@@ -59,7 +59,7 @@ export namespace Display {
 
         _statusBarItem = window.createStatusBarItem(
             StatusBarAlignment.Left,
-            Number.MIN_VALUE
+            Number.MIN_VALUE,
         );
 
         _statusBarItem.command = "perforce.menuFunctions";
@@ -69,7 +69,7 @@ export namespace Display {
 
         subscriptions.push(window.onDidChangeActiveTextEditor(updateEditor));
 
-        updateEditor();
+        void updateEditor();
     }
 
     export function getLastActiveFileStatus() {
@@ -79,7 +79,7 @@ export namespace Display {
     export function activateStatusBar() {
         if (!_statusBarActivated) {
             _statusBarActivated = true;
-            updateEditor();
+            void updateEditor();
         }
     }
 
@@ -132,7 +132,7 @@ export namespace Display {
             } catch (err) {
                 // file not under client root
                 _statusBarItem.text = "P4: $(circle-slash)";
-                _statusBarItem.tooltip = err.toString();
+                _statusBarItem.tooltip = String(err);
                 active = ActiveEditorStatus.NOT_IN_WORKSPACE;
             }
 
@@ -184,7 +184,7 @@ export namespace Display {
     }
 
     export function showModalMessage(message: string) {
-        window.showInformationMessage(message, { modal: true });
+        void window.showInformationMessage(message, { modal: true });
     }
 
     export async function requestConfirmation(message: string, yes: string) {
@@ -198,7 +198,7 @@ export namespace Display {
     }
 
     export function showImportantError(error: string) {
-        window.showErrorMessage(error);
+        void window.showErrorMessage(error);
         channel.appendLine(`ERROR: ${JSON.stringify(error)}`);
     }
 
@@ -214,13 +214,13 @@ export namespace Display {
                     await p4.login(resource, { password });
 
                     Display.showMessage("Login successful");
-                    Display.updateEditor();
+                    void Display.updateEditor();
                     loggedIn = true;
                 } catch {}
             }
         } else {
             Display.showMessage("Login successful");
-            Display.updateEditor();
+            void Display.updateEditor();
             loggedIn = true;
         }
         return loggedIn;
@@ -230,7 +230,7 @@ export namespace Display {
         try {
             await p4.logout(resource, {});
             Display.showMessage("Logout successful");
-            Display.updateEditor();
+            void Display.updateEditor();
             return true;
         } catch {}
         return false;

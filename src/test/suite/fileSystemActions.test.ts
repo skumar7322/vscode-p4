@@ -111,6 +111,7 @@ describe("File System Actions", () => {
             eventProvider.onWillDeleteFiles.attrs.fire?.({
                 files: files,
                 waitUntil: waitUntil,
+                token: { isCancellationRequested: false, onCancellationRequested: () => ({ dispose: () => {} }) },
             });
 
             expect(waitUntil).to.have.been.called;

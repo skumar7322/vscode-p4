@@ -25,10 +25,12 @@ export type UnopenedFile = {
     message: string;
 };
 
-function parseOpenFile(line: string): OpenedFile | undefined {
-    const matches = /(.+)#(\d+)\s-\s([\w\/]+)\s(default\schange|change\s\d+)\s\(([\w\+]+)\)/.exec(
-        line
-    );
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _parseOpenFile(line: string): OpenedFile | undefined {
+    const matches =
+        /(.+)#(\d+)\s-\s([\w\/]+)\s(default\schange|change\s\d+)\s\(([\w\+]+)\)/.exec(
+            line,
+        );
     if (matches) {
         const [message, depotPath, revision, operation, chnumStr, filetype] = matches;
         const chnum = chnumStr.startsWith("change") ? chnumStr.split(" ")[1] : "default";
@@ -71,9 +73,10 @@ function parseUnopenFile(line: string): UnopenedFile | undefined {
     // TestArea/newFile.txt - file(s) not opened on this client.
     // or
     // Path 'C:/Users/zogge\db.desc' is not under client's root 'c:\Users\zogge\Perforce\default'.
-    const matches = /(?:((.+)\s-\sfile\(s\)\snot\sopened.*)|(Path\s'(.+)'\sis\snot\sunder.*))/.exec(
-        line
-    );
+    const matches =
+        /(?:((.+)\s-\sfile\(s\)\snot\sopened.*)|(Path\s'(.+)'\sis\snot\sunder.*))/.exec(
+            line,
+        );
 
     if (matches) {
         const [, unopenMessage, unopenPath, noRootMessage, noRootPath] = matches;
@@ -118,7 +121,7 @@ export type OpenedFileDetails = {
  */
 export async function getOpenedFileDetails(
     resource: vscode.Uri,
-    options: OpenedFileOptions
+    options: OpenedFileOptions,
 ): Promise<OpenedFileDetails> {
     const [stdout, stderr] = await opened.raw(resource, options);
     const open = parseOpenedOutput(stdout);

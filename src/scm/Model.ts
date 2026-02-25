@@ -375,7 +375,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             Display.channel.append(created.rawOutput);
             this.Refresh();
         } catch (err) {
-            Display.showError(err.toString());
+            Display.showError(String(err));
         }
 
         return newChangelistNumber;
@@ -391,7 +391,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             });
             return created.chnum;
         } catch (err) {
-            Display.showImportantError(err.toString());
+            Display.showImportantError(String(err));
         }
     }
 
@@ -416,7 +416,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             existingChangelist: id,
         });
 
-        this._sourceControl.inputBox.value = "#" + id + "\n" + change.description ?? "";
+        this._sourceControl.inputBox.value = "#" + id + "\n" + (change.description ?? "");
     }
 
     public async EditChangeSpec(input: ResourceGroup): Promise<void> {
@@ -460,7 +460,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
                 throw new Error("The default changelist is empty");
             }
         } catch (err) {
-            Display.showError(err.toString());
+            Display.showError(String(err));
             return;
         }
 
@@ -682,7 +682,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             }
             Display.showMessage("Changelist shelved");
         } catch (err) {
-            Display.showImportantError(err.toString());
+            Display.showImportantError(String(err));
         }
         this.Refresh();
     }
@@ -721,7 +721,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             }
             Display.showMessage("Changelist unshelved");
         } catch (err) {
-            Display.showImportantError(err.toString());
+            Display.showImportantError(String(err));
         }
     }
 
@@ -747,7 +747,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             this.Refresh();
             Display.showMessage("Shelved files deleted");
         } catch (err) {
-            Display.showImportantError(err.toString());
+            Display.showImportantError(String(err));
         }
     }
 
@@ -872,7 +872,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
         try {
             await Promise.all(promises);
         } catch (reason) {
-            Display.showImportantError(reason.toString());
+            Display.showImportantError(String(reason));
             this.Refresh();
         }
     }
@@ -888,7 +888,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
         try {
             await Promise.all(promises);
         } catch (reason) {
-            Display.showImportantError(reason.toString());
+            Display.showImportantError(String(reason));
             this.Refresh();
         }
     }
@@ -916,7 +916,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             this.Refresh();
             Display.showMessage(ret);
         } catch (err) {
-            Display.showImportantError(err.toString());
+            Display.showImportantError(String(err));
         }
     }
 
@@ -947,7 +947,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             this.Refresh();
             Display.showMessage("Job " + jobId + " added");
         } catch (err) {
-            Display.showImportantError(err.toString());
+            Display.showImportantError(String(err));
         }
     }
 
@@ -1002,7 +1002,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             this.Refresh();
             Display.showMessage("Job " + jobId + " removed");
         } catch (err) {
-            Display.showImportantError(err.toString());
+            Display.showImportantError(String(err));
         }
     }
 
@@ -1080,7 +1080,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             });
             Display.channel.append(output);
         } catch (reason) {
-            Display.showImportantError(reason.toString());
+            Display.showImportantError(String(reason));
         }
         this.Refresh();
     }
@@ -1119,7 +1119,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             Display.channel.append(output);
             this.Refresh();
         } catch (reason) {
-            Display.showImportantError(reason.toString());
+            Display.showImportantError(String(reason));
         }
     }
 

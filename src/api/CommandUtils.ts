@@ -226,7 +226,7 @@ export async function runPerforceCommand(
         }
         return stdout;
     } catch (err) {
-        Display.showError(err.toString());
+        Display.showError(String(err));
         throw err;
     }
 }

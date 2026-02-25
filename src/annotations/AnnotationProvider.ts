@@ -18,15 +18,15 @@ type DecoratedChange = {
 const normalDecoration = vscode.window.createTextEditorDecorationType({
     isWholeLine: true,
     before: {
-        margin: "0 1.75em 0 0",
-    },
+        margin: "0 1.75em 0 0"
+    }
 });
 
 const highlightedDecoration = vscode.window.createTextEditorDecorationType({
     isWholeLine: true,
     backgroundColor: new vscode.ThemeColor("perforce.lineHighlightBackgroundColor"),
     overviewRulerColor: new vscode.ThemeColor("perforce.lineHighlightOverviewRulerColor"),
-    overviewRulerLane: vscode.OverviewRulerLane.Left,
+    overviewRulerLane: vscode.OverviewRulerLane.Left
 });
 
 type LogInfo = {
@@ -83,7 +83,7 @@ export class AnnotationProvider {
                 return ann?.revisionOrChnum
                     ? {
                           chnum: ann.revisionOrChnum,
-                          decoration: this._decorations[i],
+                          decoration: this._decorations[i]
                       }
                     : undefined;
             })
@@ -233,7 +233,7 @@ export class AnnotationProvider {
                     log: log[found],
                     prev: log[found + 1],
                     index,
-                    ageRating,
+                    ageRating
                 };
             }
         }
@@ -287,7 +287,7 @@ export class AnnotationProvider {
         const annotationsPromise = p4.annotate(underlying, {
             file: uri,
             outputChangelist: true,
-            followBranches,
+            followBranches
         });
 
         const logPromise = p4.getFileHistory(underlying, { file: uri, followBranches });
@@ -358,13 +358,13 @@ function makeDecorationForChange(
         backgroundColor,
         border: "solid " + color,
         textDecoration: overline,
-        borderWidth: "0px 2px 0px 0px",
+        borderWidth: "0px 2px 0px 0px"
     };
     const renderOptions: vscode.DecorationInstanceRenderOptions = { before };
 
     return {
         hoverMessage,
-        renderOptions,
+        renderOptions
     };
 }
 
@@ -457,7 +457,7 @@ function getDecorations(
 
             return {
                 range: new vscode.Range(i, 0, i, 0),
-                ...decoration,
+                ...decoration
             };
         })
         .filter(isTruthy);
