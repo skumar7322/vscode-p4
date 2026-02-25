@@ -3,19 +3,19 @@
     "displayName": "Perforce for VS Code",
     "description": "(2020 Fork) Perforce integration with VS Code's SCM features",
     "version": "4.16.2",
-    "publisher": "mjcrouch",
+    "publisher": "skumar",
     "license": "MIT",
     "categories": [
         "SCM Providers"
     ],
     "icon": "icon.png",
     "bugs": {
-        "url": "https://github.com/mjcrouch/vscode-perforce/issues"
+        "url": "https://github.com/skumar7322/vscode-p4/issues"
     },
-    "homepage": "https://github.com/mjcrouch/vscode-perforce/blob/master/README.md",
+    "homepage": "https://github.com/skumar7322/vscode-p4/blob/master/README.md",
     "repository": {
         "type": "git",
-        "url": "https://github.com/mjcrouch/vscode-perforce.git"
+        "url": "https://github.com/skumar7322/vscode-p4.git"
     },
     "galleryBanner": {
         "color": "#5c2d91",
@@ -2044,8 +2044,8 @@
         "@types/sinon": "^9.0.0",
         "@types/sinon-chai": "^3.2.3",
         "@types/vscode": "^1.109.0",
-        "@typescript-eslint/eslint-plugin": "^6.21.0",
-        "@typescript-eslint/parser": "^6.21.0",
+        "@typescript-eslint/eslint-plugin": "^8.56.1",
+        "@typescript-eslint/parser": "^8.56.1",
         "@vscode/test-electron": "^2.3.0",
         "chai": "^4.2.0",
         "chai-as-promised": "^7.1.1",
@@ -2056,7 +2056,7 @@
         "eslint-plugin-prettier": "^5.1.0",
         "eslint-webpack-plugin": "^5.0.2",
         "glob": "^7.1.6",
-        "mocha": "^7.1.2",
+        "mocha": "^11.3.0",
         "mocha-junit-reporter": "^1.23.3",
         "prettier": "^3.2.0",
         "sinon": "^9.0.0",
