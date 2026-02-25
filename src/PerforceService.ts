@@ -5,10 +5,9 @@ import * as PerforceUri from "./PerforceUri";
 import { PerforceSCMProvider } from "./ScmProvider";
 
 import * as CP from "child_process";
-import p4Node from "p4node";
+import p4Node, { PerforceNodeApi, P4Result } from "p4node";
 import * as Path from "path";
 import { CommandLimiter } from "./CommandLimiter";
-import { P4Instance } from "p4node";
 import { error } from "console";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -111,7 +110,7 @@ export namespace PerforceService {
         return new Promise((resolve, reject) => {
             execute(
                 resource,
-                command, //p4-node: ToDO
+                command,
                 (result) => {
                     if (result.error !== undefined) {
                         reject(result.error.message);
@@ -140,49 +139,9 @@ export namespace PerforceService {
         return false;
     }
 
-    async function execCommandP4Node(
-        resource: Uri,
-        command: string,
-        responseCallback: (result: P4Data) => void,
-        args?: string[],
-        input?: string,
-        useTerminal?: boolean
-    ) {
-        try {
-            const { p4, actualResource, cwd } = await createP4Instance(resource);
-
-            const cmdArgs = args ? [command, ...args] : [command];
-
-            const result = parseP4Data(p4.Run(cmdArgs, input));
-
-            // Log the executed command
-            const allArgs = getPerforceCmdParams(actualResource).concat(cmdArgs);
-            logExecutedCommand("p4", allArgs, input, { cwd });
-
-            responseCallback(result);
-            return;
-        } catch (error) {
-            // Log the error and fall back to spawning if p4node fails
-            console.warn("p4node API failed, falling back to CLI:", error);
-            // Fall through to CLI implementation below
-        }
-    }
-
-    export async function setInput(input: string, resource: Uri): Promise<void> {
-        if (!input) {
-            return;
-        }
-        try {
-            const { p4 } = await createP4Instance(resource);
-            // p4.SetInput(input); // Need to fix this
-        } catch (error) {
-            console.error("Error setting input for Perforce command:", error);
-        }
-    }
-
     async function createP4Instance(
         resource: Uri
-    ): Promise<{ p4: P4Instance; actualResource: Uri; cwd: string }> {
+    ): Promise<{ p4: PerforceNodeApi; actualResource: Uri; cwd: string }> {
         const actualResource = PerforceUri.getUsableWorkspace(resource) ?? resource;
         const isDir = await isDirectory(actualResource);
         const cwd = isDir ? actualResource.fsPath : Path.dirname(actualResource.fsPath);
@@ -207,19 +166,43 @@ export namespace PerforceService {
         return { p4, actualResource, cwd };
     }
 
-    function parseP4Data(raw: any): P4Data {
+    async function execCommand(
+        resource: Uri,
+        command: string,
+        responseCallback: (result: P4Data) => void,
+        args?: string[],
+        input?: string,
+        useTerminal?: boolean
+    ) {
+        try {
+            const { p4, actualResource, cwd } = await createP4Instance(resource);
+
+            const cmdArgs = args ? [command, ...args] : [command];
+
+            if (input) {
+                p4.SetInput(input);
+            }
+            const result = parseP4Data(input ? p4.Run(cmdArgs, input) : p4.Run(cmdArgs));
+
+            // Log the executed command
+            const allArgs = getPerforceCmdParams(actualResource).concat(cmdArgs);
+            logExecutedCommand("p4", allArgs, input, { cwd });
+
+            responseCallback(result);
+        } catch (error) {
+            console.error("p4node API failed:", error);
+            throw error;
+        }
+    }
+
+    function parseP4Data(raw: P4Result): P4Data {
         const result: P4Data = {};
 
-        // Parse 'info'
+        // Parse 'info' info will always be array
         if (Array.isArray(raw.info)) {
-            result.info = raw.info.map((entry: any) => {
-                if (typeof entry === "object") {
-                    return { ...entry };
-                } else if (typeof entry === "string") {
-                    return entry;
-                }
-                return {};
-            });
+            result.info = raw.info.map((entry) =>
+                typeof entry === "string" ? entry : { ...entry }
+            );
         }
 
         // Parse 'error'
@@ -243,33 +226,6 @@ export namespace PerforceService {
 
         return result;
     }
-
-    async function execCommand(
-        resource: Uri,
-        command: string,
-        responseCallback: (result: P4Data) => void,
-        args?: string[],
-        input?: string,
-        useTerminal?: boolean
-    ) {
-        // Use p4node API instead of spawning processes for better performance
-        if (true) {
-            try {
-                await execCommandP4Node(
-                    resource,
-                    command,
-                    responseCallback,
-                    args,
-                    input,
-                    useTerminal
-                );
-                return;
-            } catch (error) {
-                console.warn("p4node API failed, falling back to CLI:", error);
-            }
-        }
-    }
-
     //P4 Data Structure
 
     interface P4Error {

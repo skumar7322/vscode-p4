@@ -12,48 +12,6 @@ export const splitIntoSections = (str: string) => str.split(/\r*?\n\r*?\n/);
 export const removeIndent = (lines: string[]) =>
     lines.map((line) => line.replace(/^\t/, ""));
 
-/**
- * Extract a section of an array between two matching predicates
- * @param allLines The array to extract from
- * @param startingWith Matches the first line of the section (exclusive)
- * @param endingWith Matches the last line of the section - if not found, returns all elements after the start index
- */
-export function extractSection<T>(
-    allLines: T[],
-    startingWith: (line: T) => boolean,
-    endingWith: (line: T) => boolean
-) {
-    const startIndex = allLines.findIndex(startingWith);
-    if (startIndex >= 0) {
-        const endIndex = allLines.findIndex(endingWith);
-        return allLines.slice(startIndex + 1, endIndex >= 0 ? endIndex : undefined);
-    }
-}
-
-/**
- * Divides an array into sections that start with the matching line
- *
- * @param lines the array to divide
- * @param sectionMatcher a predicate that matches the first line of a section
- * @returns An array of string arrays. Each array is a section **starting** with the matching line.
- * If no matching line is present, the returned array is empty
- */
-export function sectionArrayBy<T>(lines: T[], sectionMatcher: (line: T) => boolean) {
-    const sections: T[][] = [];
-
-    let nextMatch = lines.findIndex(sectionMatcher);
-    let prevMatch = -1;
-    while (nextMatch > prevMatch) {
-        prevMatch = nextMatch;
-        nextMatch = lines.slice(prevMatch + 1).findIndex(sectionMatcher) + prevMatch + 1;
-        sections.push(
-            lines.slice(prevMatch, nextMatch > prevMatch ? nextMatch : undefined)
-        );
-    }
-
-    return sections;
-}
-
 function arraySplitter<T>(chunkSize: number) {
     return (arr: T[]): T[][] => {
         const ret: T[][] = [];
@@ -66,10 +24,10 @@ function arraySplitter<T>(chunkSize: number) {
 
 export const splitIntoChunks = <T>(arr: T[]) => arraySplitter<T>(32)(arr);
 
-export function applyToEach<T, R>(fn: (input: T) => R) {
+/* export function applyToEach<T, R>(fn: (input: T) => R) {
     return (input: T[]) => input.map((i) => fn(i));
 }
-
+ */
 export function concatIfOutputIsDefined<T, R>(...fns: ((arg: T) => R | undefined)[]) {
     return (arg: T) =>
         fns.reduce((all, fn) => {
@@ -78,7 +36,7 @@ export function concatIfOutputIsDefined<T, R>(...fns: ((arg: T) => R | undefined
         }, [] as R[]);
 }
 
-export type CmdlineArgs = (string | undefined)[];
+type CmdlineArgs = (string | undefined)[];
 
 function makeFlag(
     flag: string,
@@ -93,7 +51,7 @@ function makeFlag(
     return value ? [flagName] : [];
 }
 
-export function makeFlags(
+function makeFlags(
     pairs: [string, string | boolean | number | undefined][],
     lastArgs?: (string | undefined)[]
 ): CmdlineArgs {
@@ -171,13 +129,9 @@ export function flagMapper<P extends FlagDefinition<P>>(
         );
     };
 }
-
 const joinDefinedArgs = (args: CmdlineArgs) => args?.filter(isTruthy);
 
-export function fragmentAsSuffix(
-    fragment?: string,
-    ignoreRevisionFragments?: boolean
-): string {
+function fragmentAsSuffix(fragment?: string, ignoreRevisionFragments?: boolean): string {
     if (ignoreRevisionFragments) {
         return "";
     }
@@ -220,7 +174,7 @@ type CommandParams = {
     logStdOut?: boolean;
 };
 
-export function runPerforceCommandIgnoringStdErr(
+function runPerforceCommandIgnoringStdErr(
     resource: vscode.Uri,
     command: string,
     args: string[],
@@ -296,31 +250,8 @@ function runPerforceCommandRaw(
         PerforceService.execute(
             resource,
             command,
-            //p4-node: Updated to properly handle P4Data structure with object parsing
             (result) => {
                 try {
-                    // const stderr = result.error?.message || "";
-                    // let stdout = "";
-
-                    // //p4-node: Parse info array properly - handle both objects and strings
-                    // result.info?.forEach((data) => {
-                    //     if (typeof data === "string") {
-                    //         stdout += data + "\n";
-                    //     } else if (typeof data === "object") {
-                    //         // Convert object to key: value format
-                    //         Object.entries(data).forEach(([key, value]) => {
-                    //             stdout += `${key}: ${value}\n`;
-                    //         });
-                    //     } else {
-                    //         stdout += JSON.stringify(data) + "\n";
-                    //     }
-                    // });
-
-                    // //p4-node: Fixed logStdOut condition - was checking string literal instead of variable
-                    // if (logStdOut && stdout) {
-                    //     Display.channel.appendLine("< " + stdout);
-                    // }
-                    // resolve([stdout, stderr]);
                     const stderr = result.error?.message || "";
                     const stdout: any[] = []; // Change stdout to an array to hold JSON objects
 

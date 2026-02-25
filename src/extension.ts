@@ -68,7 +68,9 @@ async function findClientRoot(uri: vscode.Uri): Promise<ClientRoot | undefined> 
                 isAboveRoot,
             };
         }
-    } catch (err) {}
+    } catch (err) {
+        console.error("Error finding client root for " + uri.fsPath, err);
+    }
     return undefined;
 }
 
