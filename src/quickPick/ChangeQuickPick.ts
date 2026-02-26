@@ -21,7 +21,7 @@ const nbsp = "\xa0";
 export const changeQuickPickProvider: qp.ActionableQuickPickProvider = {
     provideActions: async (
         resourceOrStr: vscode.Uri | string,
-        chnum: string
+        chnum: string,
     ): Promise<qp.ActionableQuickPick> => {
         const resource = qp.asUri(resourceOrStr);
         const changes = await p4.describe(resource, {
@@ -52,7 +52,7 @@ export const changeQuickPickProvider: qp.ActionableQuickPickProvider = {
             makeUnshelvePicks(resource, shelvedChange),
             makeJobPicks(resource, change),
             makeFilePicks(resource, change),
-            makeShelvedFilePicks(resource, shelvedChange)
+            makeShelvedFilePicks(resource, shelvedChange),
         );
 
         return {
@@ -86,7 +86,7 @@ async function unshelveAndRefresh(resource: vscode.Uri, options: p4.UnshelveOpti
                     " was unshelved, but " +
                     pluralise(output.warnings.length, "file needs", 0, "files need") +
                     " resolving",
-                ...[resolveButton].filter(isTruthy)
+                ...[resolveButton].filter(isTruthy),
             );
             if (chosen && chosen === resolveButton) {
                 await p4.resolve(resource, { chnum: options.toChnum });
@@ -103,7 +103,7 @@ export const unshelveChangeQuickPickProvider: qp.ActionableQuickPickProvider = {
         resourceOrStr: vscode.Uri | string,
         chnum: string,
         clobber: boolean = true,
-        branchMapping?: string
+        branchMapping?: string,
     ): Promise<qp.ActionableQuickPick> => {
         const resource = qp.asUri(resourceOrStr);
         const defaultChangelistAction: qp.ActionableQuickPickItem = {
@@ -137,7 +137,7 @@ export const unshelveChangeQuickPickProvider: qp.ActionableQuickPickProvider = {
             resource,
             chnum,
             clobber,
-            branchMapping
+            branchMapping,
         );
         return {
             items: [defaultChangelistAction, newChangelistAction, ...changelistActions],
@@ -156,10 +156,10 @@ async function getUnshelveChangelistPicks(
     resource: vscode.Uri,
     chnum: string,
     clobber: boolean,
-    branchMapping?: string
+    branchMapping?: string,
 ) {
     const info = await p4.getInfo(resource, {});
-    const user = info.get("User name");
+    const user = info.get("userName");
 
     if (!user) {
         return [];
@@ -187,7 +187,7 @@ async function getUnshelveChangelistPicks(
 export async function showUnshelveQuickPick(
     resource: vscode.Uri,
     chnum: string,
-    branchMapping?: string
+    branchMapping?: string,
 ) {
     return qp.showQuickPick("unshelveChange", resource, chnum, true, branchMapping);
 }
@@ -215,7 +215,7 @@ export function getOperationIcon(operation: string) {
 
 function makeFocusPick(
     resource: vscode.Uri,
-    change: DescribedChangelist
+    change: DescribedChangelist,
 ): qp.ActionableQuickPickItem[] {
     return [
         {
@@ -248,7 +248,8 @@ function makeSwarmPick(change: DescribedChangelist): qp.ActionableQuickPickItem[
         Display.showImportantError(
             "Could not parse swarm link " +
                 swarmAddr +
-                " - make sure you have included the protocol, e.g. https://"
+                " - make sure you have included the protocol, e.g. https://" +
+                String(err),
         );
         return [];
     }
@@ -256,7 +257,7 @@ function makeSwarmPick(change: DescribedChangelist): qp.ActionableQuickPickItem[
 
 function makeEditPicks(
     uri: vscode.Uri,
-    change: DescribedChangelist
+    change: DescribedChangelist,
 ): qp.ActionableQuickPickItem[] {
     return [
         {
@@ -271,7 +272,7 @@ function makeEditPicks(
 
 function makeClipboardPicks(
     _uri: vscode.Uri,
-    change: DescribedChangelist
+    change: DescribedChangelist,
 ): qp.ActionableQuickPickItem[] {
     return [
         qp.makeClipPick("change number", change.chnum),
@@ -282,7 +283,7 @@ function makeClipboardPicks(
 
 function makeFilePicks(
     uri: vscode.Uri,
-    change: DescribedChangelist
+    change: DescribedChangelist,
 ): qp.ActionableQuickPickItem[] {
     return [
         {
@@ -305,18 +306,18 @@ function makeFilePicks(
                     const thisUri = PerforceUri.fromDepotPath(
                         PerforceUri.getUsableWorkspace(uri) ?? uri,
                         file.depotPath,
-                        file.revision
+                        file.revision,
                     );
                     showQuickPickForFile(thisUri);
                 },
             };
-        })
+        }),
     );
 }
 
 async function searchForBranch(
     uri: vscode.Uri,
-    branch: string
+    branch: string,
 ): Promise<string | undefined> {
     try {
         const branches = await p4.branches(uri, {
@@ -329,7 +330,7 @@ async function searchForBranch(
         }
         return await vscode.window.showQuickPick(
             branches.map((b) => b.branch),
-            { placeHolder: "Choose a matching branch" }
+            { placeHolder: "Choose a matching branch" },
         );
     } catch (err) {
         Display.showImportantError(String(err));
@@ -338,7 +339,7 @@ async function searchForBranch(
 
 function makeUnshelvePicks(
     uri: vscode.Uri,
-    change?: DescribedChangelist
+    change?: DescribedChangelist,
 ): qp.ActionableQuickPickItem[] {
     if (!change || change.shelvedFiles.length < 1) {
         return [];
@@ -379,7 +380,7 @@ function makeUnshelvePicks(
 
 function makeShelvedFilePicks(
     uri: vscode.Uri,
-    change?: DescribedChangelist
+    change?: DescribedChangelist,
 ): qp.ActionableQuickPickItem[] {
     if (!change || change.shelvedFiles.length < 1) {
         return [];
@@ -405,17 +406,17 @@ function makeShelvedFilePicks(
                     showQuickPickForShelvedFile(
                         PerforceUri.getUsableWorkspace(uri) ?? uri,
                         file,
-                        change
+                        change,
                     );
                 },
             };
-        })
+        }),
     );
 }
 
 function makeJobPicks(
     uri: vscode.Uri,
-    change: DescribedChangelist
+    change: DescribedChangelist,
 ): qp.ActionableQuickPickItem[] {
     return [
         {
@@ -430,6 +431,6 @@ function makeJobPicks(
                     showQuickPickForJob(uri, job.id);
                 },
             };
-        })
+        }),
     );
 }
