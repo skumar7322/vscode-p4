@@ -29,32 +29,38 @@ export type Annotation = {
     date?: string;
 };
 
-interface RawAnnotateItem {
-    data?: string;
-    lower?: string;
-    revision?: string;
-    change?: string;
-    user?: string;
-    date?: string;
-}
-
 function parseAnnotateOutput(
     output: string,
     withUser?: boolean,
 ): (Annotation | undefined)[] {
-    const parsed = JSON.parse(output) as (RawAnnotateItem | null)[];
-    return parsed.map((item) => {
-        if (!item) {
-            return undefined;
-        }
+    const parsed = JSON.parse(output) as Record<string, string>[];
+    return parsed
+        .filter((item) => {
+            // Skip null items and file metadata (items with depotFile but no data)
+            if (!item) {
+                return false;
+            }
+            if (item.depotFile && !item.data) {
+                return false;
+            }
+            return true;
+        })
+        .map((item) => {
+            if (!item) {
+                return undefined;
+            }
 
-        return {
-            line: item.data || "",
-            revisionOrChnum: item.lower || item.revision || item.change || "",
-            user: withUser ? item.user : undefined,
-            date: withUser ? item.date : undefined,
-        };
-    });
+            // Remove trailing newline from data if present
+            const lineData = item.data?.replace(/\n$/, "") || "";
+
+            return {
+                line: lineData,
+                // lower contains the changelist number that introduced this line
+                revisionOrChnum: item.lower || item.revision || item.change || "",
+                user: withUser ? item.user : undefined,
+                date: withUser ? item.date : undefined,
+            };
+        });
 }
 
 export async function annotate(resource: vscode.Uri, options: AnnotateOptions) {
