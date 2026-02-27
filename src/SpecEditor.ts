@@ -11,12 +11,12 @@ type SpecStore = { [key: string]: SpecInstance };
 
 function convertJsonToSpecFormat(jsonText: string): string {
     try {
-        const jsonData = JSON.parse(jsonText);
+        const jsonData: unknown = JSON.parse(jsonText);
         if (!Array.isArray(jsonData) || jsonData.length === 0) {
             return jsonText;
         }
 
-        const specData = jsonData[0];
+        const specData = jsonData[0] as Record<string, string>;
         let specText = "";
         Object.keys(specData).forEach((key) => {
             const value = specData[key];
@@ -36,6 +36,7 @@ function convertJsonToSpecFormat(jsonText: string): string {
 
         return specText.trim();
     } catch (error) {
+        console.warn("Unable to parse spec as JSON. Input:", jsonText, "Error:", error);
         return jsonText;
     }
 }
@@ -47,7 +48,10 @@ abstract class SpecEditor {
     private _subscriptions: vscode.Disposable[];
     private _suppressNextSave?: vscode.TextDocument;
 
-    constructor(context: vscode.ExtensionContext, private _type: string) {
+    constructor(
+        context: vscode.ExtensionContext,
+        private _type: string,
+    ) {
         this._state = context.globalState;
         this._store = vscode.Uri.file(context.globalStoragePath);
         this._hasUnresolvedPrompt = false;
@@ -56,7 +60,7 @@ abstract class SpecEditor {
             vscode.workspace.onWillSaveTextDocument((doc) => {
                 // DON'T AWAIT - WILL PREVENT SAVE
                 this.checkSavedDoc(doc);
-            })
+            }),
         );
     }
 
@@ -77,7 +81,7 @@ abstract class SpecEditor {
     protected abstract inputSpecText(
         resource: vscode.Uri,
         item: string,
-        text: string
+        text: string,
     ): Promise<string | undefined>;
 
     private get mapName() {
@@ -136,7 +140,7 @@ abstract class SpecEditor {
             const chosen = await vscode.window.showWarningMessage(
                 "WARNING - your editor is configured to use spaces and never tabs, which causes strange indentation when editing perforce spec files. Consider enabling the `editor.detectIndentation` setting",
                 enable,
-                ignore
+                ignore,
             );
             if (chosen === enable) {
                 await vscode.workspace
@@ -149,7 +153,7 @@ abstract class SpecEditor {
                     .update(
                         "specEditor.showIndentWarning",
                         false,
-                        vscode.ConfigurationTarget.Global
+                        vscode.ConfigurationTarget.Global,
                     );
             }
         }
@@ -189,7 +193,9 @@ abstract class SpecEditor {
         if (item === "new") {
             SpecEditor.selectNewDescription(editor);
         }
-        SpecEditor.checkTabSettings();
+        SpecEditor.checkTabSettings().catch((err) => {
+            console.warn("Error checking tab settings", err);
+        });
     }
 
     /**
@@ -203,7 +209,7 @@ abstract class SpecEditor {
                 location: vscode.ProgressLocation.Window,
                 title: "Retrieving spec for " + this._type + " " + item,
             },
-            () => this.editSpecImpl(resource, item)
+            () => this.editSpecImpl(resource, item),
         );
     }
 
@@ -224,14 +230,14 @@ abstract class SpecEditor {
         const filename = Path.basename(file.fsPath);
         if (!this.isValidSpecFilename(filename)) {
             throw new Error(
-                "Filename " + filename + " does not end in ." + this.specSuffix
+                "Filename " + filename + " does not end in ." + this.specSuffix,
             );
         }
         const item = this.getSpecItemName(filename);
         const resource = this.getResource(file);
         if (!resource) {
             throw new Error(
-                "Could not find workspace details for " + this._type + " " + item
+                "Could not find workspace details for " + this._type + " " + item,
             );
         }
         if (doc?.isDirty) {
@@ -251,7 +257,7 @@ abstract class SpecEditor {
                     location: vscode.ProgressLocation.Window,
                     title: "Uploading spec for " + this._type + " " + item,
                 },
-                () => this.inputSpecText(resource, item, text)
+                () => this.inputSpecText(resource, item, text),
             );
 
             if (
@@ -299,7 +305,7 @@ abstract class SpecEditor {
                 const chosen = await vscode.window.showInformationMessage(message, ok);
                 this._hasUnresolvedPrompt = false;
                 if (chosen === ok) {
-                    this.inputSpec(doc);
+                    void this.inputSpec(doc);
                 }
             }
         }
@@ -316,9 +322,10 @@ class ChangeSpecEditor extends SpecEditor {
         return p4.outputChange(resource, { existingChangelist: chnum });
     }
     protected async inputSpecText(resource: vscode.Uri, item: string, text: string) {
+        // Raw change spec input string from editor. Key separated by \t fields by \n\n
         const output = await p4.inputRawChangeSpec(resource, { input: text });
         Display.showMessage(output.rawOutput);
-        PerforceSCMProvider.RefreshAll();
+        void PerforceSCMProvider.RefreshAll();
         return output.chnum ?? item;
     }
 }

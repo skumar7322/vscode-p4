@@ -26,45 +26,39 @@ const changes = makeSimpleCommand(
             ["m", "maxChangelists"],
         ],
         "files",
-        ["-l"]
-    )
+        ["-l"],
+    ),
 );
 
-function parseChangelist(changeData: any): ChangeInfo | undefined {
-    if (!changeData || typeof changeData !== "object") {
+function parseChangelist(changeData: Record<string, string>): ChangeInfo | undefined {
+    if (!changeData || !changeData.change) {
         return undefined;
     }
 
-    const chnum = changeData.change;
-    const user = changeData.user;
-    const client = changeData.client;
-    const timeStr = changeData.time;
-    const description = changeData.desc
-        ? changeData.desc.split("\\n").filter((line: string) => line.trim())
-        : [];
-    const isPending = changeData.status === "pending";
+    // desc may contain literal \n (backslash-n) or actual newlines
+    const rawDesc = changeData.desc || "";
+    const description = rawDesc
+        .replace(/\\n/g, "\n") // Convert literal \n to actual newline
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
 
     return {
-        chnum,
-        user,
-        client,
+        chnum: changeData.change,
+        user: changeData.user,
+        client: changeData.client,
         description,
-        isPending,
-        date: timeStr ? parseDate(timeStr) : undefined,
+        isPending: changeData.status === "pending",
+        date: changeData.time ? parseDate(changeData.time) : undefined,
     };
 }
 
 function parseChangesOutput(output: string): ChangeInfo[] {
-    try {
-        const changelists = JSON.parse(output);
-        if (!Array.isArray(changelists)) {
-            return [];
-        }
-
-        return changelists.map(parseChangelist).filter(isTruthy);
-    } catch (error) {
+    const changelists = JSON.parse(output) as Record<string, string>[];
+    if (!Array.isArray(changelists)) {
         return [];
     }
+    return changelists.map(parseChangelist).filter(isTruthy);
 }
 
 export const getChangelists = asyncOuputHandler(changes, parseChangesOutput);

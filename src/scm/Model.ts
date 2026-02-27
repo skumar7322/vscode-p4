@@ -56,7 +56,7 @@ class ChangelistContext {
         vscode.commands.executeCommand(
             "setContext",
             "perforce.changes." + this._type,
-            this._val
+            this._val,
         );
     }
 
@@ -151,7 +151,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
     public constructor(
         private _workspaceUri: vscode.Uri, // TODO better not to dupliate this with the scm provider
         private _clientName: string,
-        public _sourceControl: SourceControl
+        public _sourceControl: SourceControl,
     ) {
         this._disposables.push(vscode.window.registerFileDecorationProvider(this));
         this._disposables.push(this._onDidChangeFileDecorationsEmitter);
@@ -160,23 +160,23 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
         this._refresh = debounce<(boolean | undefined)[], Promise<void>>(
             this.RefreshImpl.bind(this),
             this._config.refreshDebounceTime,
-            () => (this._refreshInProgress = true)
+            () => (this._refreshInProgress = true),
         );
         this._disposables.push(this._refresh);
         this._disposables.push(
-            Display.onActiveFileStatusKnown(this.checkForConflicts.bind(this))
+            Display.onActiveFileStatusKnown(this.checkForConflicts.bind(this)),
         );
     }
 
     provideFileDecoration(
         uri: Uri,
-        _token: vscode.CancellationToken
+        _token: vscode.CancellationToken,
     ): vscode.ProviderResult<vscode.FileDecoration> {
         const resource = this._openResourcesByPath.get(uri.fsPath);
         if (resource) {
             return DecorationProvider.getFileDecorations(
                 [resource.status],
-                resource.isUnresolved
+                resource.isUnresolved,
             );
         }
         return null;
@@ -193,7 +193,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             throw new Error(
                 "The non-default changelist '" +
                     input.chnum +
-                    "' is not valid for this operation"
+                    "' is not valid for this operation",
             );
         }
     }
@@ -217,7 +217,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
                     "Detected conflicting status for file " +
                         event.file +
                         "\nSCM provider believes the file is open, but latest 'opened' call does not.\n" +
-                        "This is probably caused by an external change such as submitting or reverting the file from another application."
+                        "This is probably caused by an external change such as submitting or reverting the file from another application.",
                 );
                 // does not refresh immediately to prevent the possibility of infinite refreshing
                 // only stores the fact that there is a conflict to override checks in other places (file system watcher)
@@ -262,7 +262,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
                 location: ProgressLocation.SourceControl,
                 title: "Syncing...",
             },
-            () => this.syncUpdate(paths)
+            () => this.syncUpdate(paths),
         );
     }
 
@@ -321,7 +321,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
                 location: ProgressLocation.SourceControl,
                 title: "Updating status...",
             },
-            () => this.updateStatus()
+            () => this.updateStatus(),
         );
     }
 
@@ -344,7 +344,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
 
     public async SaveToChangelist(
         descStr: string,
-        existingChangelist?: string
+        existingChangelist?: string,
     ): Promise<string | undefined> {
         if (!descStr) {
             descStr = "<saved by VSCode>";
@@ -360,10 +360,10 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             });
 
             changeFields.files = changeFields.files.filter((_file, i) =>
-                this.isInWorkspace(infos[i]?.["clientFile"])
+                this.isInWorkspace(infos[i]?.["clientFile"]),
             );
         }
-        changeFields.description = descStr;
+        changeFields.description = descStr.trimEnd();
 
         let newChangelistNumber: string | undefined;
         try {
@@ -385,7 +385,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
         try {
             const changeFields = await p4.getChangeSpec(this._workspaceUri, {});
             changeFields.files = [];
-            changeFields.description = descStr;
+            changeFields.description = descStr.trimEnd();
             const created = await p4.inputChangeSpec(this._workspaceUri, {
                 spec: changeFields,
             });
@@ -440,7 +440,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             const uri = PerforceUri.forCommand(
                 input.model.workspaceUri,
                 "describe",
-                input.chnum
+                input.chnum,
             );
             await commands.executeCommand<void>("vscode.open", uri);
         }
@@ -474,7 +474,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             ["Submit", "Save Changelist", "Cancel"],
             {
                 ignoreFocusOut: true,
-            }
+            },
         );
 
         if (!pick || pick === "Cancel") {
@@ -509,7 +509,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             if (
                 !(await this.requestConfirmation(
                     "Are you sure you want to submit changelist " + input.chnum + "?",
-                    "Submit changelist"
+                    "Submit changelist",
                 ))
             ) {
                 return;
@@ -539,18 +539,18 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
     public async SubmitSelectedFile(resources: Resource[]) {
         if (resources.some((r) => r.change !== "default")) {
             Display.showModalMessage(
-                "Only files from the default changelist can be submitted selectively"
+                "Only files from the default changelist can be submitted selectively",
             );
             return;
         }
 
         const spec = await p4.getChangeSpec(this.workspaceUri, {});
         spec.files = spec.files?.filter((file) =>
-            resources.some((r) => r.depotPath === file.depotPath)
+            resources.some((r) => r.depotPath === file.depotPath),
         );
         if (spec.files?.length !== resources.length) {
             Display.showModalMessage(
-                "Unable to submit. The selection is inconsistent with the actual default changelist. Perhaps the perforce view needs refreshing?"
+                "Unable to submit. The selection is inconsistent with the actual default changelist. Perhaps the perforce view needs refreshing?",
             );
             return;
         }
@@ -559,7 +559,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
         if (!desc) {
             return;
         }
-        spec.description = desc;
+        spec.description = desc.trimEnd();
 
         this.createAndSubmitFromSpec(spec);
     }
@@ -570,7 +570,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
 
     public async Revert(
         input: Resource | ResourceGroup,
-        unchanged?: boolean
+        unchanged?: boolean,
     ): Promise<void> {
         let needRefresh = false;
 
@@ -580,7 +580,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
         if (input instanceof Resource) {
             if (input.isShelved) {
                 Display.showImportantError(
-                    "Revert cannot be used on shelved file: " + input.basenameWithoutRev
+                    "Revert cannot be used on shelved file: " + input.basenameWithoutRev,
                 );
                 return;
             }
@@ -709,10 +709,10 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
                             unshelved.warnings.length,
                             "file needs",
                             0,
-                            "files need"
+                            "files need",
                         ) +
                         " resolving",
-                    resolveButton
+                    resolveButton,
                 );
                 if (chosen === resolveButton) {
                     await p4.resolve(this._workspaceUri, { chnum: input.chnum });
@@ -755,7 +755,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
         const resolveButton = "Resolve file";
         const chosen = await vscode.window.showWarningMessage(
             input.basenameWithoutRev + " was unshelved, but needs resolving",
-            resolveButton
+            resolveButton,
         );
         if (chosen === resolveButton) {
             await p4.resolve(this._workspaceUri, {
@@ -782,7 +782,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
                 { modal: true },
                 yes,
                 always,
-                never
+                never,
             );
             if (chosen === always) {
                 configAccessor.fileShelveMode = FileShelveMode.SWAP;
@@ -820,7 +820,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
                 { modal: true },
                 yes,
                 always,
-                never
+                never,
             );
             if (chosen === always) {
                 configAccessor.fileShelveMode = FileShelveMode.SWAP;
@@ -864,7 +864,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
     public async ShelveMultiple(input: Resource[]) {
         if (input.some((r) => r.isShelved)) {
             Display.showModalMessage(
-                "Some selected files are already shelved. Please select only unshelved files"
+                "Some selected files are already shelved. Please select only unshelved files",
             );
             return;
         }
@@ -880,7 +880,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
     public async UnshelveMultiple(input: Resource[]) {
         if (input.some((r) => !r.isShelved)) {
             Display.showModalMessage(
-                "Some selected files are not shelved. Please select only shelved files"
+                "Some selected files are not shelved. Please select only shelved files",
             );
             return;
         }
@@ -896,7 +896,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
     public async DeleteShelvedFile(input: Resource): Promise<void> {
         if (!input.isShelved) {
             Display.showImportantError(
-                "Shelve cannot be used on normal file: " + input.basenameWithoutRev
+                "Shelve cannot be used on normal file: " + input.basenameWithoutRev,
             );
             return;
         }
@@ -954,19 +954,17 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
     private async pickJobFromChangelist(chnum: string) {
         const allJobs = await p4.getFixedJobs(this._workspaceUri, { chnum });
 
-        const items = allJobs.map(
-            (job): vscode.QuickPickItem => {
-                return {
-                    description: job.description[0],
-                    label: job.id,
-                    detail: job.description.slice(1).join(" "),
-                };
-            }
-        );
+        const items = allJobs.map((job): vscode.QuickPickItem => {
+            return {
+                description: job.description[0],
+                label: job.id,
+                detail: job.description.slice(1).join(" "),
+            };
+        });
 
         if (items.length === 0) {
             Display.showModalMessage(
-                "Changelist " + chnum + " does not have any jobs attached"
+                "Changelist " + chnum + " does not have any jobs attached",
             );
             return;
         }
@@ -1184,7 +1182,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             false,
             action,
             fstatInfo,
-            headType
+            headType,
         );
 
         return resource;
@@ -1192,7 +1190,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
 
     private static getChangelistsWhereSome(
         groups: ResourceGroup[],
-        predicate: (resource: Resource) => boolean
+        predicate: (resource: Resource) => boolean,
     ) {
         return groups
             .filter((group) => group.resourceStates.some((r) => predicate(r as Resource)))
@@ -1201,10 +1199,10 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
 
     private static updateContextVars(groups: ResourceGroup[]) {
         this._resolvable.addChangelists(
-            this.getChangelistsWhereSome(groups, (r) => r.isUnresolved)
+            this.getChangelistsWhereSome(groups, (r) => r.isUnresolved),
         );
         this._reResolvable.addChangelists(
-            this.getChangelistsWhereSome(groups, (r) => r.isReresolvable)
+            this.getChangelistsWhereSome(groups, (r) => r.isReresolvable),
         );
     }
 
@@ -1235,7 +1233,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
         if (!group) {
             group = this._sourceControl.createResourceGroup(
                 "pending:" + c.chnum,
-                "#" + c.chnum + ": " + c.description.join(" ")
+                "#" + c.chnum + ": " + c.description.join(" "),
             ) as ResourceGroup;
             group.model = this;
             group.isDefault = false;
@@ -1249,12 +1247,12 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
 
     private arrangeResourcesByChangelist(
         changelists: ChangeInfo[],
-        resources: Resource[]
+        resources: Resource[],
     ) {
         const changesWithResources = changelists
             .map((c) => {
                 const resourceStates = resources.filter(
-                    (resource) => resource.change === c.chnum
+                    (resource) => resource.change === c.chnum,
                 );
                 if (!this.shouldDisplayChangelist(resourceStates)) {
                     return;
@@ -1264,7 +1262,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             .filter(isTruthy);
 
         const haveNewChangelists = changesWithResources.some(
-            (res) => !this._pendingGroups.has(res.change.chnum)
+            (res) => !this._pendingGroups.has(res.change.chnum),
         );
         return {
             haveNewChangelists,
@@ -1295,7 +1293,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
         if (!this._defaultGroup) {
             this._defaultGroup = this._sourceControl.createResourceGroup(
                 "default",
-                "Default Changelist"
+                "Default Changelist",
             ) as ResourceGroup;
             this._defaultGroup.isDefault = true;
             this._defaultGroup.model = this;
@@ -1304,7 +1302,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
 
         this._defaultGroup.resourceStates = resources.filter(
             (resource): resource is Resource =>
-                !!resource && resource.change === "default"
+                !!resource && resource.change === "default",
         );
 
         const arranged = this.arrangeResourcesByChangelist(changelists, resources);
@@ -1343,13 +1341,13 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
     }
 
     private async getChanges(
-        changeStatus: p4.ChangelistStatus = p4.ChangelistStatus.PENDING
+        changeStatus: p4.ChangelistStatus = p4.ChangelistStatus.PENDING,
     ): Promise<ChangeInfo[]> {
         const changes = this.filterIgnoredChangelists(
             await p4.getChangelists(this._workspaceUri, {
                 client: this._clientName,
                 status: changeStatus,
-            })
+            }),
         );
 
         return this._config.changelistOrder === "ascending" ? changes.reverse() : changes;
@@ -1374,14 +1372,14 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
                 outputPendingRecord: true,
                 limitToShelved: true,
                 chnum: c.chnum.toString(),
-            })
+            }),
         );
         const fstatInfo = await Promise.all(proms);
         return fstatInfo
             .flat() // flatten nested arrays
             .filter((info) => info["depotFile"]) // filter out changelist only record
             .map((info) =>
-                this.makeResourceForShelvedFile(info["change"].toString(), info)
+                this.makeResourceForShelvedFile(info["change"].toString(), info),
             ) // create resources
             .filter(isTruthy); // filter null records
     }
@@ -1402,13 +1400,13 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
             PerforceUri.fromDepotPath(
                 underlyingUri ?? this.workspaceUri,
                 fstatInfo.depotFile,
-                undefined
+                undefined,
             ),
             underlyingUri,
             chnum,
             true,
             fstatInfo["action"],
-            fstatInfo
+            fstatInfo,
         );
         return resource;
     }
@@ -1422,7 +1420,7 @@ export class Model implements Disposable, vscode.FileDecorationProvider {
                 limitToOpened: true,
                 limitToClient: true,
                 chnum: c.chnum.toString(),
-            })
+            }),
         );
         const fstatInfo = await Promise.all(proms);
 

@@ -1,7 +1,7 @@
 import { pipe } from "@arrows/composition";
 import { flagMapper, makeSimpleCommand, asyncOuputHandler } from "../CommandUtils";
 import { RawField } from "../CommonTypes";
-import { getBasicField, parseSpecOutput } from "../SpecParser";
+import { findFieldValue, parseSpecOutput } from "../SpecParser";
 import { isTruthy } from "../../TsUtils";
 
 export type Job = {
@@ -14,10 +14,10 @@ export type Job = {
 
 function mapToJobFields(rawFields: RawField[]): Job {
     return {
-        job: getBasicField(rawFields, "Job")?.[0].trim(),
-        status: getBasicField(rawFields, "Status")?.[0].trim(),
-        user: getBasicField(rawFields, "User")?.[0].trim(),
-        description: getBasicField(rawFields, "Description")?.join("\n"),
+        job: findFieldValue(rawFields, "Job")?.[0].trim(),
+        status: findFieldValue(rawFields, "Status")?.[0].trim(),
+        user: findFieldValue(rawFields, "User")?.[0].trim(),
+        description: findFieldValue(rawFields, "Description")?.join("\n"),
         rawFields,
     };
 }
@@ -109,7 +109,7 @@ const inputRawJobCommand = makeSimpleCommand(
         return {
             input: options.input,
         };
-    }
+    },
 );
 
 export const inputRawJobSpec = asyncOuputHandler(inputRawJobCommand, parseCreatedJob);

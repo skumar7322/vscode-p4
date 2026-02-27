@@ -18,7 +18,7 @@ function parseRawFields(parts: string[]): RawField[] {
     });
 }
 
-export const getBasicField = (fields: RawField[], field: string) =>
+export const findFieldValue = (fields: RawField[], field: string) =>
     fields.find((i) => i.name === field)?.value;
 
 const excludeNonFields = (parts: string[]) =>
@@ -26,29 +26,45 @@ const excludeNonFields = (parts: string[]) =>
 
 export const parseSpecOutput = pipe(splitIntoSections, excludeNonFields, parseRawFields);
 
+// Parse p4-change -o output into RawField[]
 export const parseSpecString = (input: string): RawField[] => {
+    // Parse p4-node JSON format: [{"Change":"421","Description":"text\\n",...}]
     try {
         const fields: RawField[] = [];
-        const json = JSON.parse(input);
-        if (!Array.isArray(json)) {
-            fields;
+        const json: unknown = JSON.parse(input);
+        if (!Array.isArray(json) || json.length === 0) {
+            return fields;
         }
-        const firstObject = json[0];
+        const specObject = json[0] as Record<string, unknown>;
+        if (!specObject || typeof specObject !== "object") {
+            return fields;
+        }
 
-        Object.entries(firstObject).forEach(([key, value]) => {
+        Object.entries(specObject).forEach(([key, value]) => {
+            const strValue = String(value);
+
+            // Only Description may contain literal \n that needs splitting
+            const valueLines =
+                key === "Description"
+                    ? strValue
+                          .replace(/\\n/g, "\n")
+                          .split("\n")
+                          .filter((line) => line.length > 0)
+                    : [strValue.replace(/\\n$/, "")]; // Just trim trailing \n for other fields
+
+            // Check if key is indexed fields like Jobs0, Files0, Files1
             const match = /^([A-Za-z]+)(\d+)$/.exec(key);
             if (match) {
-                // Process Indexed field like Jobs0, Files1
                 const baseName = match[1];
                 let field = fields.find((f) => f.name === baseName);
                 if (!field) {
-                    field = { name: baseName, value: [String(value)] };
+                    field = { name: baseName, value: valueLines };
                     fields.push(field);
                 } else {
-                    field.value.push(String(value));
+                    field.value.push(...valueLines);
                 }
             } else {
-                fields.push({ name: key, value: [String(value)] });
+                fields.push({ name: key, value: valueLines });
             }
         });
         return fields;

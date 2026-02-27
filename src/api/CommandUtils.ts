@@ -40,7 +40,7 @@ type CmdlineArgs = (string | undefined)[];
 
 function makeFlag(
     flag: string,
-    value: string | boolean | number | undefined
+    value: string | boolean | number | undefined,
 ): CmdlineArgs {
     const flagName = "-" + flag;
     if (typeof value === "string") {
@@ -53,7 +53,7 @@ function makeFlag(
 
 function makeFlags(
     pairs: [string, string | boolean | number | undefined][],
-    lastArgs?: (string | undefined)[]
+    lastArgs?: (string | undefined)[],
 ): CmdlineArgs {
     return pairs
         .flatMap((pair) => makeFlag(pair[0], pair[1]))
@@ -74,7 +74,7 @@ type FlagDefinition<T> = {
 
 function lastArgAsStrings(
     lastArg: FlagValue,
-    options?: FlagMapperOptions
+    options?: FlagMapperOptions,
 ): (string | undefined)[] | undefined {
     if (typeof lastArg === "boolean") {
         return undefined;
@@ -111,7 +111,7 @@ export function flagMapper<P extends FlagDefinition<P>>(
     flagNames: [string, keyof P][],
     lastArg?: keyof P,
     fixedPrefix?: CmdlineArgs,
-    options?: FlagMapperOptions
+    options?: FlagMapperOptions,
 ) {
     return (params: P): CmdlineArgs => {
         return (fixedPrefix ?? []).concat(
@@ -122,10 +122,8 @@ export function flagMapper<P extends FlagDefinition<P>>(
                         params[fn[1]] as string | boolean | number | undefined,
                     ];
                 }),
-                lastArg
-                    ? lastArgAsStrings(params[lastArg] as FlagValue, options)
-                    : undefined
-            )
+                lastArg ? lastArgAsStrings(params[lastArg], options) : undefined,
+            ),
         );
     };
 }
@@ -144,7 +142,7 @@ function fileSpecToArg(fileSpec: vscode.Uri, ignoreRevisionFragments?: boolean) 
             PerforceUri.getDepotPathFromDepotUri(fileSpec) +
             fragmentAsSuffix(
                 PerforceUri.getRevOrAtLabel(fileSpec),
-                ignoreRevisionFragments
+                ignoreRevisionFragments,
             )
         );
     }
@@ -178,7 +176,7 @@ function runPerforceCommandIgnoringStdErr(
     resource: vscode.Uri,
     command: string,
     args: string[],
-    hideStdErr?: boolean
+    hideStdErr?: boolean,
 ): Promise<string> {
     return runPerforceCommand(resource, command, args, {
         stdErrIsOk: true,
@@ -199,7 +197,7 @@ export async function runPerforceCommand(
     resource: vscode.Uri,
     command: string,
     args: string[],
-    params: CommandParams
+    params: CommandParams,
 ): Promise<string> {
     const { input, hideStdErr, stdErrIsOk, useTerminal, logStdOut } = params;
 
@@ -210,7 +208,7 @@ export async function runPerforceCommand(
             args,
             input,
             useTerminal,
-            logStdOut
+            logStdOut,
         );
         if (stderr) {
             if (hideStdErr) {
@@ -244,7 +242,7 @@ function runPerforceCommandRaw(
     args: string[],
     input?: string,
     useTerminal?: boolean,
-    logStdOut?: boolean
+    logStdOut?: boolean,
 ): Promise<[string, string, string | undefined]> {
     return new Promise((resolve, reject) =>
         PerforceService.execute(
@@ -269,7 +267,7 @@ function runPerforceCommandRaw(
                     //p4-node: Fixed logStdOut condition - was checking string literal instead of variable
                     if (logStdOut && stdout.length > 0) {
                         Display.channel.appendLine(
-                            "< " + JSON.stringify(stdout, null, 2)
+                            "< " + JSON.stringify(stdout, null, 2),
                         ); // Log as JSON
                     }
 
@@ -287,8 +285,8 @@ function runPerforceCommandRaw(
             },
             args,
             input,
-            useTerminal
-        )
+            useTerminal,
+        ),
     );
 }
 
@@ -321,14 +319,14 @@ export function mergeAll<T>(...args: T[]): T {
 export function makeSimpleCommand<T>(
     command: string,
     fn: (opts: T) => CmdlineArgs,
-    otherParams?: (opts: T) => CommandParams | undefined
+    otherParams?: (opts: T) => CommandParams | undefined,
 ) {
     const func = (resource: vscode.Uri, options: T, overrideParams?: CommandParams) =>
         runPerforceCommand(
             resource,
             command,
             joinDefinedArgs(fn(options)),
-            mergeWithoutOverriding(overrideParams ?? {}, otherParams?.(options) ?? {})
+            mergeWithoutOverriding(overrideParams ?? {}, otherParams?.(options) ?? {}),
         );
 
     func.raw = (resource: vscode.Uri, options: T) =>
@@ -342,7 +340,7 @@ export function makeSimpleCommand<T>(
             resource,
             command,
             joinDefinedArgs(fn(options)),
-            true
+            true,
         );
 
     return func;
@@ -355,7 +353,7 @@ export function makeSimpleCommand<T>(
  */
 export function asyncOuputHandler<T extends any[], M, O>(
     fn: (...args: T) => Promise<M>,
-    mapper: (arg: M) => O
+    mapper: (arg: M) => O,
 ) {
     return async (...args: T) => mapper(await fn(...args));
 }
